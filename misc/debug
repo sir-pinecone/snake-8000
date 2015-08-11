@@ -1,0 +1,3 @@
+#!/bin/sh
+
+devenv ../builds/handmade-hero/win32_handmade.exe code/*.cpp

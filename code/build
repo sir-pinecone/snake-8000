@@ -1,0 +1,46 @@
+#!/bin/sh
+
+version=64
+debug=1
+
+# Compiler Flags
+# --------------
+warning_level="-W4"
+compiler_warnings="$warning_level -wd4201 -wd4100 -wd4189 -wd4505 -wd4456"
+compiler_env="-DHANDMADE_INTERNAL=1 -DHANDMADE_SLOW=1 -DHANDMADE_WIN32=1"
+
+[[ $debug -eq 1 ]] && conditional_flags="-MTd" || conditional_flags="-MT"
+
+# NOTE: according to MSDN, -Gm is not available when using -Z7. Also -Zi is compatible but it implies /debug mode
+common_compiler_flags="$conditional_flags -nologo -EHa- -Gm- -GR- -Od -Oi -WX $compiler_warnings $compiler_env -FC -Z7"
+
+# Linker Flags
+# ------------
+no_junk="-incremental:no -opt:ref"
+dependencies="user32.lib gdi32.lib winmm.lib"
+common_linker_flags="$no_junk"
+_32bit_linker="-subsystem:windows,5.02 $common_linker_flags"
+_64bit_linker=$common_linker_flags
+[[ $version -eq 64 ]] && common_linker="$_64bit_linker" || common_linker="$_32bit_linker"
+
+# Linkers
+# -------
+platform_linker="$common_linker $dependencies"
+handmade_linker="$common_linker -PDB:handmade_$RANDOM.pdb -DLL -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender"
+
+# Build
+#------
+handmade_source_file="../../handmade-hero/code/handmade.cpp"
+win32_source_file="../../handmade-hero/code/win32_handmade.cpp"
+
+#-----------------------------------------------------------------------------------------
+# Compile!
+
+mkdir ../../builds/handmade-hero -p
+pushd ../../builds/handmade-hero
+rm ../../builds/handmade-hero/*.pdb &>/dev/null
+
+cl $common_compiler_flags $handmade_source_file -Fmhandmade.map -LD -link $handmade_linker
+cl $common_compiler_flags $win32_source_file -Fmwin32_handmade.map -link $platform_linker
+
+popd
