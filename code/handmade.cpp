@@ -55,25 +55,73 @@ void RenderWeirdGradient(game_offscreen_buffer* buffer,
   }
 }
 
-void RenderPlayer(game_offscreen_buffer* buffer, int player_x, int player_y) {
+void RenderGrid(game_offscreen_buffer* buffer, int grid_item_size) {
+  uint8 *row = (uint8 *)buffer->memory;
+  for (int32 y = 0; y < buffer->height; ++y) {
+    uint32 *pixel = (uint32*)row; // Get a 4-byte pixel pointer (using 32-bit RGB)
+    for (int32 x = 0; x < buffer->width; ++x) {
+      *pixel++ = RGBColor(255,150,200);
+    }
+    row += buffer->pitch; // Move the pointer to the start of the next row
+  }
+}
+
+void RenderSnake(game_offscreen_buffer *buffer, snake_state *snake) {
   uint8 *end_of_buffer = (uint8 *)buffer->memory + (buffer->height * buffer->pitch);
-  int bottom = player_y + 40;
-  for (int x = player_x;
-       x < player_x + 30;
-       ++x) {
+  int size = 25;
+  int total_pixels = snake->block_size * snake->length;
+  int bottom = snake->y + snake->block_size;
+  for (int x = snake->x; x < snake->x + total_pixels; ++x) {
     uint8 *pixel = (uint8 *)buffer->memory +
                    (x * buffer->bytes_per_pixel) +
-                   (player_y * buffer->pitch);
+                   (snake->y * buffer->pitch);
 
-    for (int y = player_y;
-        y < bottom;
-        ++y) {
+    for (int y = snake->y; y < bottom; ++y) {
       if ((pixel >= buffer->memory) && ((pixel + 4) <= end_of_buffer)) {
         *(uint32 *)pixel = RGBColor(255,255,255);
       }
       pixel += buffer->pitch;
     }
   }
+}
+
+void UpdateSnake(game_offscreen_buffer *buffer, snake_state *snake) {
+  int default_speed = 4;
+
+  if (snake->y + snake->block_size >= buffer->height) {
+    snake->dir = NORTH;
+  }
+  else if (snake->y <= 0) {
+    snake->dir = SOUTH;
+  }
+  else if (snake->x <= 0) {
+    snake->dir = EAST;
+  }
+  else if (snake->x + (snake->block_size * snake->length) >= buffer->width) {
+    snake->dir = WEST;
+  }
+
+  int new_x = snake->x;
+  int new_y = snake->y;
+  switch(snake->dir) {
+    case NORTH: {
+      new_y -= default_speed;
+    } break;
+
+    case EAST: {
+      new_x += default_speed;
+    } break;
+
+    case SOUTH: {
+      new_y += default_speed;
+    } break;
+
+    case WEST: {
+      new_x -= default_speed;
+    } break;
+  }
+  snake->x = new_x;
+  snake->y = new_y;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -86,6 +134,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   Assert(sizeof(game_state) <= memory->permanent_storage_size);
 
   game_state *state = (game_state *)memory->permanent_storage;
+  snake_state snake = {};
+
   if (!memory->is_initialized) {
     char *filename = __FILE__;
 
@@ -95,12 +145,16 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
       memory->DEBUGPlatformFreeFileMemory(thread, file.content);
     }
 
+    snake.x = 300;
+    snake.y = 300;
+    snake.length = 2;
+    snake.block_size = 25;
+    snake.dir = EAST;
+    state->snake = snake;
+
     state->tone_hz = 220;
     state->t_sine = 0.0f;
     state->red_offset = 1;
-
-    state->player_x = 300;
-    state->player_y = 300;
 
     // TODO this may be more appropriate to do in the platform layer
     memory->is_initialized = true;
@@ -120,18 +174,29 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
       /* NOTE: Use digital movement tuning */
       if (controller->move_left.ended_down) {
         state->blue_offset -= 1;
+        state->snake.dir = WEST;
       }
 
       if (controller->move_right.ended_down) {
         state->blue_offset += 1;
+        state->snake.dir = EAST;
       }
 
       if (controller->move_up.ended_down) {
         state->green_offset -= 1;
+        state->snake.dir = NORTH;
       }
 
       if (controller->move_down.ended_down) {
         state->green_offset += 1;
+        state->snake.dir = SOUTH;
+      }
+
+      if (controller->left_shoulder.ended_down) {
+        state->snake.length += 1;
+      }
+      else if (controller->right_shoulder.ended_down && state->snake.length > 1) {
+        state->snake.length -= 1;
       }
     }
 
@@ -139,19 +204,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
       state->red_offset += 1;
     }
 
-    state->player_x += (int32)(4.0f * controller->stick_avg_x);
-    state->player_y -= (int32)(4.0f * controller->stick_avg_y);
+    //state->snake.x += (int32)(4.0f * controller->stick_avg_x);
+    //state->snake.y -= (int32)(4.0f * controller->stick_avg_y);
   }
 
   RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
-  RenderPlayer(screen_buffer, state->player_x, state->player_y);
-  RenderPlayer(screen_buffer, input->mouse_x, input->mouse_y);
+  UpdateSnake(screen_buffer, &state->snake);
+  RenderSnake(screen_buffer, &state->snake);
 
   for (int button_idx = 0;
        button_idx < ArrayCount(input->mouse_buttons);
        ++button_idx) {
     if (input->mouse_buttons[button_idx].ended_down) {
-      RenderPlayer(screen_buffer, 40 * button_idx + 10 , 10);
+      //RenderSnake(screen_buffer, 40 * button_idx + 10 , 10, 1);
     }
   }
 }

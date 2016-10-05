@@ -244,10 +244,19 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 //
 //
 
+enum direction {NORTH, EAST, SOUTH, WEST};
+
+struct snake_state {
+  int x;
+  int y;
+  int length;
+  int block_size;
+  direction dir;
+};
+
 /* NOTE: might relocate this later since the platform layer doesn't need to know about it at all */
 struct game_state {
-  int player_x;
-  int player_y;
+  snake_state snake;
 
   int32 tone_hz;
   int32 blue_offset;
