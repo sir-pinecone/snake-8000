@@ -244,7 +244,7 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 //
 //
 
-enum direction {NORTH, EAST, SOUTH, WEST};
+enum direction {NORTH, EAST, SOUTH, WEST, NONE};
 
 struct snake_part {
   direction dir;
@@ -257,7 +257,7 @@ struct snake_state {
   int y; // TODO rm
   int length;
   int block_size;
-  direction dir; // TODO rm
+  direction new_direction;
   snake_part parts[20]; // TODO move number to constant
 };
 
