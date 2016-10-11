@@ -246,12 +246,19 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
 enum direction {NORTH, EAST, SOUTH, WEST};
 
-struct snake_state {
+struct snake_part {
+  direction dir;
   int x;
   int y;
+};
+
+struct snake_state {
+  int x; // TODO rm
+  int y; // TODO rm
   int length;
   int block_size;
-  direction dir;
+  direction dir; // TODO rm
+  snake_part parts[20]; // TODO move number to constant
 };
 
 /* NOTE: might relocate this later since the platform layer doesn't need to know about it at all */

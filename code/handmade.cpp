@@ -66,21 +66,23 @@ void RenderGrid(game_offscreen_buffer* buffer, int grid_item_size) {
   }
 }
 
-void RenderSnake(game_offscreen_buffer *buffer, snake_state *snake) {
+void RenderSnakeParts(game_offscreen_buffer *buffer, snake_state *snake) {
   uint8 *end_of_buffer = (uint8 *)buffer->memory + (buffer->height * buffer->pitch);
-  int size = 25;
-  int total_pixels = snake->block_size * snake->length;
-  int bottom = snake->y + snake->block_size;
-  for (int x = snake->x; x < snake->x + total_pixels; ++x) {
-    uint8 *pixel = (uint8 *)buffer->memory +
-                   (x * buffer->bytes_per_pixel) +
-                   (snake->y * buffer->pitch);
+  for (int part_idx = 0; part_idx < ArrayCount(snake->parts); ++part_idx) {
+    snake_part *part = &snake->parts[part_idx];
+    if (part) {
+      for (int x = part->x; x < part->x + snake->block_size; ++x) {
+        uint8 *pixel = (uint8 *)buffer->memory +
+                       (x * buffer->bytes_per_pixel) +
+                       (part->y * buffer->pitch);
 
-    for (int y = snake->y; y < bottom; ++y) {
-      if ((pixel >= buffer->memory) && ((pixel + 4) <= end_of_buffer)) {
-        *(uint32 *)pixel = RGBColor(255,255,255);
+        for (int y = part->y; y < part->y + snake->block_size; ++y) {
+          if ((pixel >= buffer->memory) && ((pixel + 4) <= end_of_buffer)) {
+            *(uint32 *)pixel = RGBColor(110,255,180);
+          }
+          pixel += buffer->pitch;
+        }
       }
-      pixel += buffer->pitch;
     }
   }
 }
@@ -150,6 +152,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     snake.length = 2;
     snake.block_size = 25;
     snake.dir = EAST;
+
+    for (int part_idx = 0;
+        part_idx < ArrayCount(snake.parts);
+        ++part_idx) {
+      snake_part *part = &snake.parts[part_idx];
+      // TODO pick random starting pos
+      part->x = part_idx * (snake.block_size + 4) + 200;
+      part->y = 200;
+      part->dir = EAST;
+    }
+
     state->snake = snake;
 
     state->tone_hz = 220;
@@ -210,15 +223,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 
   RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
   UpdateSnake(screen_buffer, &state->snake);
-  RenderSnake(screen_buffer, &state->snake);
-
-  for (int button_idx = 0;
-       button_idx < ArrayCount(input->mouse_buttons);
-       ++button_idx) {
-    if (input->mouse_buttons[button_idx].ended_down) {
-      //RenderSnake(screen_buffer, 40 * button_idx + 10 , 10, 1);
-    }
-  }
+  RenderSnakeParts(screen_buffer, &state->snake);
 }
 
 // extern "C" tells the compiler to use the old C naming process which will preserve the
