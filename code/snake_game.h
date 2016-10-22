@@ -56,6 +56,9 @@ typedef double real64;
 // NOTE: we wrap `Array` before getting 0 element so that we can support an expr being passed in
 #define ArrayCount(array) (sizeof(array) / sizeof((array)[0]))
 
+#define Min(a, b) ((a) < (b) ? (a) : (b))
+#define Max(a, b) ((a) > (b) ? (a) : (b))
+
 inline uint32
 SafeTruncateUInt64(uint64 value) {
   // TODO add defines for max values
@@ -102,7 +105,7 @@ struct thread_context {
   int placeholder;
 };
 
-// TODO: swap, min, max ... as a macro??
+// TODO: swap as a macro??
 
 // ---------------------------------------------------------------------------------------
 // Services that the platform layer provides to the game
