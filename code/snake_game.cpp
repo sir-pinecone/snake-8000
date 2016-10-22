@@ -117,6 +117,7 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
   int start_x = snake->head_tile_x;
   int start_y = snake->head_tile_y;
   int prev_direction = NONE;
+  uint32 color = snake->alive ? RGBColor(110, 250, 150) : RGBColor(255, 0, 0);
 
   for (int piece_idx = 0; piece_idx < 1; ++piece_idx) { //snake->length; ++piece_idx) {
     direction *piece_dir = GetSnakePieceDir(snake, piece_idx);
@@ -128,7 +129,7 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
       int x_pixel = GetTilePixel(x_start, state->num_tiles_x, state->tile_size);
       int y_pixel = GetTilePixel(y_start, state->num_tiles_y, state->tile_size);
 
-      DrawBlock(buffer, RGBColor(110,250,150), x_pixel, y_pixel, state->tile_size);
+      DrawBlock(buffer, color, x_pixel, y_pixel, state->tile_size);
     }
   }
 }
@@ -159,7 +160,9 @@ MoveSnakePart(snake_part *part) {
   part->y = new_y;
 }
 
-void UpdateSnake(game_offscreen_buffer *buffer, snake_state *snake) {
+void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
+  snake_state *snake = &state->snake;
+
   /*
   if (snake->y + snake->block_size >= buffer->height) {
     snake->dir = NORTH;
@@ -174,6 +177,16 @@ void UpdateSnake(game_offscreen_buffer *buffer, snake_state *snake) {
     snake->dir = WEST;
   }
   */
+
+  // Check for death
+  if (snake->head_tile_x == 0 || snake->head_tile_x == state->num_tiles_x + 1
+      || snake->head_tile_y == 0 || snake->head_tile_y == state->num_tiles_y + 1) {
+    // TODO dead
+    snake->alive = false;
+
+    snake->head_tile_y = Max(1, Min(snake->head_tile_y, state->num_tiles_y));
+    snake->head_tile_x = Max(1, Min(snake->head_tile_x, state->num_tiles_x));
+  }
 
   // Shift the directions
   for (int piece_idx = snake->length - 1; piece_idx > 0; --piece_idx) {
@@ -194,6 +207,7 @@ void ProcessInput(game_input *input, game_state *state) {
       controller_idx < ArrayCount(input->controllers);
       ++controller_idx) {
     game_controller_input *controller = GetController(input, controller_idx);
+    snake_state *snake = &state->snake;
 
     if (controller->is_analog) {
       /* NOTE:  Use analog movement tuning */
@@ -201,26 +215,28 @@ void ProcessInput(game_input *input, game_state *state) {
       state->tone_hz = 220 + (int32)(128.0f * controller->stick_avg_y);
     }
     else {
-      snake_state *snake = &state->snake;
-
       /* NOTE: Use digital movement tuning */
       if (controller->move_left.ended_down) {
         state->blue_offset -= 1;
+        snake->head_tile_x--;
         ChangeSnakeDirection(snake, WEST);
       }
 
       if (controller->move_right.ended_down) {
         state->blue_offset += 1;
+        snake->head_tile_x++;
         ChangeSnakeDirection(snake, EAST);
       }
 
       if (controller->move_up.ended_down) {
         state->green_offset -= 1;
+        snake->head_tile_y--;
         ChangeSnakeDirection(snake, NORTH);
       }
 
       if (controller->move_down.ended_down) {
         state->green_offset += 1;
+        snake->head_tile_y++;
         ChangeSnakeDirection(snake, SOUTH);
       }
 
@@ -234,6 +250,7 @@ void ProcessInput(game_input *input, game_state *state) {
 
     if (controller->action_down.ended_down) {
       state->red_offset += 1;
+      snake->alive = true;
     }
 
     //state->snake.x += (int32)(4.0f * controller->stick_avg_x);
@@ -273,10 +290,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     // Start with a head
     snake.length = 1;
     // TODO pick random starting pos
-    snake.head_tile_x = 8;
-    snake.head_tile_y = 16;
+    snake.head_tile_x = 1;
+    snake.head_tile_y = 1;
 
     snake.parts[0] = EAST;
+    snake.alive = true;
 
     state->snake = snake;
 
@@ -291,7 +309,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   ProcessInput(input, state);
   // RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
   RenderGrid(screen_buffer, state);
-  UpdateSnake(screen_buffer, &state->snake);
+  UpdateSnake(screen_buffer, state);
   RenderSnake(screen_buffer, state);
 }
 

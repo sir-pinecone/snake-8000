@@ -265,6 +265,7 @@ struct snake_state {
   int length;
   int head_tile_x;
   int head_tile_y;
+  bool32 alive;
 
   // TODO remove
   direction new_direction;
