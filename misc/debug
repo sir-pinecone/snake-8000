@@ -1,3 +1,3 @@
 #!/bin/sh
 
-devenv ../builds/handmade-hero/win32_handmade.exe code/*.cpp
+devenv ../builds/snake/win32_snake_game.exe code/*.cpp
