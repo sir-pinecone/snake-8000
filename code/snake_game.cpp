@@ -103,48 +103,8 @@ snake_piece * GetSnakeHead(snake_state *snake) {
   return GetSnakePiece(snake, 0);
 }
 
-void ExtendSnake(snake_state *snake) {
-  // Adds a new part to the tail of the snake. Uses the direction of its sibling.
-  if (snake->length < ArrayCount(snake->pieces)) {
-    snake->pieces[snake->length++] = *GetSnakePiece(snake, snake->length - 1);
-  }
-}
-
-void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
-  snake->new_direction = new_dir;
-}
-
-void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
-  uint8 *end_of_buffer = (uint8 *)buffer->memory + (buffer->height * buffer->pitch);
-  snake_state *snake = &state->snake;
-  snake_piece *head = GetSnakeHead(snake);
-
-  int start_x = head->x;
-  int start_y = head->y;
-  direction prev_direction = NONE;
-  uint32 color = snake->alive ? RGBColor(110, 250, 150) : RGBColor(255, 0, 0);
-
-  for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) { //snake->length; ++piece_idx) {
-    snake_piece *piece = GetSnakePiece(snake, piece_idx);
-    if (piece) {
-      // we can get the side to draw on by looking at the previous direct and then drawing
-      // at the opposing edge.
-      int x_start = (prev_direction == NONE) ? start_x : start_x; // TODO get tile in opposite direction of previous_dir
-      int y_start = (prev_direction == NONE) ? start_y : start_y; // TODO get tile in opposite direction of previous_dir
-      int x_pixel = GetTilePixel(x_start, state->num_tiles_x, state->tile_size);
-      int y_pixel = GetTilePixel(y_start, state->num_tiles_y, state->tile_size);
-
-      DrawBlock(buffer, color, x_pixel, y_pixel, state->tile_size);
-    }
-    prev_direction = piece->dir;
-  }
-}
-
-
-void MoveSnakePiece(snake_piece *piece) {
-  int new_x = piece->x;
-  int new_y = piece->y;
-  switch(piece->dir) {
+void MoveSnakePiece(snake_piece *piece, direction in_direction) {
+  switch(in_direction) {
     case NORTH: {
       piece->y--;
     } break;
@@ -163,6 +123,42 @@ void MoveSnakePiece(snake_piece *piece) {
   }
 }
 
+void ExtendSnake(snake_state *snake, direction in_direction) {
+  Assert((snake->length - 1) >= 0);
+  if (snake->length < ArrayCount(snake->pieces)) {
+    snake_piece *last = GetSnakePiece(snake, snake->length - 1);
+    snake_piece new_piece;
+    new_piece.x = last->x;
+    new_piece.y = last->y;
+    // We want to place the piece in the correct spot
+    MoveSnakePiece(&new_piece, in_direction);
+    new_piece.dir = last->dir;
+    snake->pieces[snake->length++] = new_piece;
+  }
+}
+
+void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
+  snake->new_direction = new_dir;
+}
+
+void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
+  snake_state *snake = &state->snake;
+  snake_piece *head = GetSnakeHead(snake);
+
+  int start_x = head->x;
+  int start_y = head->y;
+  uint32 color = snake->alive ? RGBColor(110, 250, 150) : RGBColor(255, 0, 0);
+
+  for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) { //snake->length; ++piece_idx) {
+    snake_piece *piece = GetSnakePiece(snake, piece_idx);
+    if (piece) {
+      int x_pixel = GetTilePixel(piece->x, state->num_tiles_x, state->tile_size);
+      int y_pixel = GetTilePixel(piece->y, state->num_tiles_y, state->tile_size);
+      DrawBlock(buffer, color, x_pixel, y_pixel, state->tile_size);
+    }
+  }
+}
+
 void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
   // TODO decrease step speed as snake length increases
   if (state->snake_update_timer > 0.1f) {
@@ -178,7 +174,8 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
 
     // TODO move the pieces
     for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
-      MoveSnakePiece(GetSnakePiece(snake, piece_idx));
+      snake_piece *piece = GetSnakePiece(snake, piece_idx);
+      MoveSnakePiece(piece, piece->dir);
       //snake_piece *next = GetSnakePiece(snake, piece_idx - 1);
       //current->dir = next->dir;
     }
@@ -232,7 +229,7 @@ void ProcessInput(game_input *input, game_state *state) {
       }
 
       if (controller->right_shoulder.ended_down && snake->length < ArrayCount(snake->pieces)) {
-        ExtendSnake(snake);
+        ExtendSnake(snake, WEST);
       }
       else if (controller->left_shoulder.ended_down && snake->length > 1) {
         snake->length--;
