@@ -249,7 +249,7 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
 enum direction {NORTH, EAST, SOUTH, WEST, NONE};
 
-struct snake_part {
+struct snake_piece {
   direction dir;
   int x;
   int y;
@@ -263,15 +263,10 @@ struct dir_tile {
 
 struct snake_state {
   int length;
-  int head_tile_x;
-  int head_tile_y;
   bool32 alive;
-
-  // TODO remove
   direction new_direction;
   dir_tile dir_tiles[2000];
-  // TODO better name
-  direction parts[20];
+  snake_piece pieces[20];
 };
 
 /* NOTE: might relocate this later since the platform layer doesn't need to know about it at all */

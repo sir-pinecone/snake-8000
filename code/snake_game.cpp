@@ -94,15 +94,19 @@ void RenderGrid(game_offscreen_buffer* buffer, game_state *state) {
   }
 }
 
-direction * GetSnakePieceDir(snake_state *snake, int index) {
-  Assert(index < ArrayCount(snake->parts));
-  return &snake->parts[index];
+snake_piece * GetSnakePiece(snake_state *snake, int index) {
+  Assert(index < ArrayCount(snake->pieces));
+  return &snake->pieces[index];
+}
+
+snake_piece * GetSnakeHead(snake_state *snake) {
+  return GetSnakePiece(snake, 0);
 }
 
 void ExtendSnake(snake_state *snake) {
   // Adds a new part to the tail of the snake. Uses the direction of its sibling.
-  if (snake->length < ArrayCount(snake->parts)) {
-    snake->parts[snake->length++] = *GetSnakePieceDir(snake, snake->length - 1);
+  if (snake->length < ArrayCount(snake->pieces)) {
+    snake->pieces[snake->length++] = *GetSnakePiece(snake, snake->length - 1);
   }
 }
 
@@ -113,15 +117,16 @@ void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
 void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
   uint8 *end_of_buffer = (uint8 *)buffer->memory + (buffer->height * buffer->pitch);
   snake_state *snake = &state->snake;
+  snake_piece *head = GetSnakeHead(snake);
 
-  int start_x = snake->head_tile_x;
-  int start_y = snake->head_tile_y;
-  int prev_direction = NONE;
+  int start_x = head->x;
+  int start_y = head->y;
+  direction prev_direction = NONE;
   uint32 color = snake->alive ? RGBColor(110, 250, 150) : RGBColor(255, 0, 0);
 
-  for (int piece_idx = 0; piece_idx < 1; ++piece_idx) { //snake->length; ++piece_idx) {
-    direction *piece_dir = GetSnakePieceDir(snake, piece_idx);
-    if (piece_dir) {
+  for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) { //snake->length; ++piece_idx) {
+    snake_piece *piece = GetSnakePiece(snake, piece_idx);
+    if (piece) {
       // we can get the side to draw on by looking at the previous direct and then drawing
       // at the opposing edge.
       int x_start = (prev_direction == NONE) ? start_x : start_x; // TODO get tile in opposite direction of previous_dir
@@ -131,75 +136,57 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
 
       DrawBlock(buffer, color, x_pixel, y_pixel, state->tile_size);
     }
+    prev_direction = piece->dir;
   }
 }
 
-void
-MoveSnakePart(snake_part *part) {
-  int default_speed = 4;
-  int new_x = part->x;
-  int new_y = part->y;
-  switch(part->dir) {
-    case NORTH: {
-      new_y -= default_speed;
-    } break;
 
-    case EAST: {
-      new_x += default_speed;
+void MoveSnakePiece(snake_piece *piece) {
+  int new_x = piece->x;
+  int new_y = piece->y;
+  switch(piece->dir) {
+    case NORTH: {
+      piece->y--;
     } break;
 
     case SOUTH: {
-      new_y += default_speed;
+      piece->y++;
+    } break;
+
+    case EAST: {
+      piece->x++;
     } break;
 
     case WEST: {
-      new_x -= default_speed;
+      piece->x--;
     } break;
   }
-  part->x = new_x;
-  part->y = new_y;
 }
 
 void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
   snake_state *snake = &state->snake;
+  snake_piece *head = GetSnakeHead(snake);
 
-  /*
-  if (snake->y + snake->block_size >= buffer->height) {
-    snake->dir = NORTH;
+  if (snake->new_direction != NONE) {
+    head->dir = snake->new_direction;
+    snake->new_direction = NONE;
   }
-  else if (snake->y <= 0) {
-    snake->dir = SOUTH;
+
+  // TODO move the pieces
+  for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
+    MoveSnakePiece(GetSnakePiece(snake, piece_idx));
+    //snake_piece *next = GetSnakePiece(snake, piece_idx - 1);
+    //current->dir = next->dir;
   }
-  else if (snake->x <= 0) {
-    snake->dir = EAST;
-  }
-  else if (snake->x + (snake->block_size * snake->length) >= buffer->width) {
-    snake->dir = WEST;
-  }
-  */
 
   // Check for death
-  if (snake->head_tile_x == 0 || snake->head_tile_x == state->num_tiles_x + 1
-      || snake->head_tile_y == 0 || snake->head_tile_y == state->num_tiles_y + 1) {
+  if (head->x == 0 || head->x == state->num_tiles_x + 1
+      || head->y == 0 || head->y == state->num_tiles_y + 1) {
     // TODO dead
     snake->alive = false;
-
-    snake->head_tile_y = Max(1, Min(snake->head_tile_y, state->num_tiles_y));
-    snake->head_tile_x = Max(1, Min(snake->head_tile_x, state->num_tiles_x));
+    head->x = Max(1, Min(head->x, state->num_tiles_x));
+    head->y = Max(1, Min(head->y, state->num_tiles_y));
   }
-
-  // Shift the directions
-  for (int piece_idx = snake->length - 1; piece_idx > 0; --piece_idx) {
-    direction *current = GetSnakePieceDir(snake, piece_idx);
-    direction *next = GetSnakePieceDir(snake, piece_idx - 1);
-    *current = *next;
-    // TODO MoveSnakePart(part);
-  }
-
-  direction *head = GetSnakePieceDir(snake, 0);
-  *head = snake->new_direction;
-  snake->new_direction = NONE;
-  // TODO MoveSnakePart(head);
 }
 
 void ProcessInput(game_input *input, game_state *state) {
@@ -218,29 +205,25 @@ void ProcessInput(game_input *input, game_state *state) {
       /* NOTE: Use digital movement tuning */
       if (controller->move_left.ended_down) {
         state->blue_offset -= 1;
-        snake->head_tile_x--;
         ChangeSnakeDirection(snake, WEST);
       }
 
       if (controller->move_right.ended_down) {
         state->blue_offset += 1;
-        snake->head_tile_x++;
         ChangeSnakeDirection(snake, EAST);
       }
 
       if (controller->move_up.ended_down) {
         state->green_offset -= 1;
-        snake->head_tile_y--;
         ChangeSnakeDirection(snake, NORTH);
       }
 
       if (controller->move_down.ended_down) {
         state->green_offset += 1;
-        snake->head_tile_y++;
         ChangeSnakeDirection(snake, SOUTH);
       }
 
-      if (controller->right_shoulder.ended_down && snake->length < ArrayCount(snake->parts)) {
+      if (controller->right_shoulder.ended_down && snake->length < ArrayCount(snake->pieces)) {
         ExtendSnake(snake);
       }
       else if (controller->left_shoulder.ended_down && snake->length > 1) {
@@ -279,28 +262,27 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
       memory->DEBUGPlatformFreeFileMemory(thread, file.content);
     }
 
+    state->tone_hz = 220;
+    state->t_sine = 0.0f;
+    state->red_offset = 1;
+
     state->game_width = screen_buffer->width;
     state->game_height = screen_buffer->height;
     state->tile_size = 25;
     state->num_tiles_x = (int)(state->game_width / state->tile_size);
     state->num_tiles_y = (int)(state->game_height / state->tile_size);
 
-    snake.new_direction = NONE;
-
-    // Start with a head
-    snake.length = 1;
     // TODO pick random starting pos
-    snake.head_tile_x = 1;
-    snake.head_tile_y = 1;
-
-    snake.parts[0] = EAST;
+    snake.new_direction = NONE;
+    snake_piece head = {};
+    head.dir = SOUTH;
+    head.x = 1;
+    head.y = 1;
+    snake.pieces[0] = head;
+    snake.length = 1;
     snake.alive = true;
 
     state->snake = snake;
-
-    state->tone_hz = 220;
-    state->t_sine = 0.0f;
-    state->red_offset = 1;
 
     // TODO this may be more appropriate to do in the platform layer
     memory->is_initialized = true;
