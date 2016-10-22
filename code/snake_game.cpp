@@ -68,14 +68,29 @@ int GetTilePixel(int tile_n, int num_tiles, int tile_size) {
   return ((tile_n - 1) % num_tiles) * tile_size;
 }
 
-void RenderGrid(game_offscreen_buffer* buffer, int grid_item_size) {
-  uint8 *row = (uint8 *)buffer->memory;
-  for (int32 y = 0; y < buffer->height; ++y) {
-    uint32 *pixel = (uint32*)row; // Get a 4-byte pixel pointer (using 32-bit RGB)
-    for (int32 x = 0; x < buffer->width; ++x) {
-      *pixel++ = RGBColor(255,150,200);
+void
+DrawBlock(game_offscreen_buffer* buffer, uint32 color,
+          int x_start, int y_start, int block_size) {
+  uint8 *end_of_buffer = (uint8 *)buffer->memory + (buffer->height * buffer->pitch);
+  for (int x = x_start; x < x_start + block_size; ++x) {
+    uint8 *pixel = (uint8 *)buffer->memory +
+                   (x * buffer->bytes_per_pixel) +
+                   (y_start * buffer->pitch);
+    for (int y = y_start; y < y_start + block_size; ++y) {
+      Assert((pixel >= buffer->memory) && ((pixel + block_size) <= end_of_buffer));
+      *(uint32 *)pixel = color;
+      pixel += buffer->pitch;
     }
-    row += buffer->pitch; // Move the pointer to the start of the next row
+  }
+}
+
+void RenderGrid(game_offscreen_buffer* buffer, game_state *state) {
+  for (int y = 1; y <= state->num_tiles_y; ++y) {
+    int y_pixel = GetTilePixel(y, state->num_tiles_y, state->tile_size);
+    for (int x = 1; x <= state->num_tiles_x; ++x) {
+      int x_pixel = GetTilePixel(x, state->num_tiles_x, state->tile_size);
+      DrawBlock(buffer, RGBColor(255,150,200), x_pixel, y_pixel, state->tile_size);
+    }
   }
 }
 
@@ -113,18 +128,7 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
       int x_pixel = GetTilePixel(x_start, state->num_tiles_x, state->tile_size);
       int y_pixel = GetTilePixel(y_start, state->num_tiles_y, state->tile_size);
 
-      for (int x = x_pixel; x < x_pixel + state->tile_size; ++x) {
-        uint8 *pixel = (uint8 *)buffer->memory +
-                       (x * buffer->bytes_per_pixel) +
-                       (y_pixel * buffer->pitch);
-
-        for (int y = y_pixel; y < y_pixel + state->tile_size; ++y) {
-          if ((pixel >= buffer->memory) && ((pixel + 4) <= end_of_buffer)) {
-            *(uint32 *)pixel = RGBColor(110,255,180);
-          }
-          pixel += buffer->pitch;
-        }
-      }
+      DrawBlock(buffer, RGBColor(110,250,150), x_pixel, y_pixel, state->tile_size);
     }
   }
 }
@@ -285,7 +289,8 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   }
 
   ProcessInput(input, state);
-  RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
+  // RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
+  RenderGrid(screen_buffer, state);
   UpdateSnake(screen_buffer, &state->snake);
   RenderSnake(screen_buffer, state);
 }
