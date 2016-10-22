@@ -1,13 +1,13 @@
-# snake
-It's a snake game. Move the snake around and eat the snake foods to grow ur snake into long snake.
+# Snake 8000
+Holy shit, it's a snake game. Move the snake around and eat the snake foods to grow ur snake into long snake.
 If your snake touch wall then snake is died. If your snake grow so big that the snake is as big as
 snake home then you are won.
 
 ---
 
-This is built upon a portion of the Handmade Hero engine, which is a project led by Casey Muratori.
-It's a great project that is a lot of fun to follow along with. He has YouTube screencasts that you
-can watch while typing up the engine based on his guidance. Check it out yo [https://hero.handmade.network/episodes](https://hero.handmade.network/episodes).
+This is built upon a small portion of the Handmade Hero engine that I've coded from scratch with my own tweaks. HMH is a wonderful series from Casey Muratori
+that teaches you all about game engine development at a professional level. He has YouTube screencasts that you can watch while typing up the engine based on
+his guidance. Check it out yo [https://hero.handmade.network/episodes](https://hero.handmade.network/episodes).
 
 # Setup
 
