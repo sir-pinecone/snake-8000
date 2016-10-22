@@ -252,13 +252,20 @@ struct snake_part {
   int y;
 };
 
+struct dir_tile {
+  direction dir;
+  int x;
+  int y;
+};
+
 struct snake_state {
-  int x; // TODO rm
-  int y; // TODO rm
   int length;
   int block_size;
+  // TODO remove
   direction new_direction;
-  snake_part parts[20]; // TODO move number to constant
+  dir_tile dir_tiles[2000];
+  // TODO make this an array of directions instead
+  direction parts[20];
 };
 
 /* NOTE: might relocate this later since the platform layer doesn't need to know about it at all */
