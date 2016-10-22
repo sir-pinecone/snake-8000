@@ -138,7 +138,17 @@ void ExtendSnake(snake_state *snake, direction in_direction) {
 }
 
 void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
-  snake->new_direction = new_dir;
+  snake_piece *head = GetSnakeHead(snake);
+  if (head->dir != new_dir && snake->new_direction != new_dir) {
+    snake->new_direction = new_dir;
+    // Record the path change
+    Assert(snake->dir_recording_index < ArrayCount(snake->dir_recordings));
+    dir_change_record record = {};
+    record.dir = new_dir;
+    record.x = head->x;
+    record.y = head->y;
+    snake->dir_recordings[snake->dir_recording_index++] = record;
+  }
 }
 
 void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
@@ -256,7 +266,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   Assert(sizeof(game_state) <= memory->permanent_storage_size);
 
   game_state *state = (game_state *)memory->permanent_storage;
-  snake_state snake = {};
 
   if (!memory->is_initialized) {
     char *filename = __FILE__;
@@ -278,7 +287,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     state->num_tiles_y = (int)(state->game_height / state->tile_size);
 
     // TODO pick random starting pos
+    snake_state snake = {};
     snake.new_direction = NONE;
+    snake.dir_recording_index = 0;
     snake_piece head = {};
     head.dir = SOUTH;
     head.x = 1;

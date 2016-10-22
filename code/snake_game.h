@@ -247,7 +247,7 @@ typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 //
 //
 
-enum direction {NORTH, EAST, SOUTH, WEST, NONE};
+enum direction {NONE, NORTH, EAST, SOUTH, WEST};
 
 struct snake_piece {
   direction dir;
@@ -255,7 +255,7 @@ struct snake_piece {
   int y;
 };
 
-struct dir_tile {
+struct dir_change_record {
   direction dir;
   int x;
   int y;
@@ -265,7 +265,8 @@ struct snake_state {
   int length;
   bool32 alive;
   direction new_direction;
-  dir_tile dir_tiles[2000];
+  dir_change_record dir_recordings[2000];
+  uint32 dir_recording_index;
   snake_piece pieces[20];
 };
 
