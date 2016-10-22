@@ -4,7 +4,7 @@
  * Make sure to not include anything static in the DLL. Put state in the game memory.
  */
 
-#include "handmade.h"
+#include "snake_game.h"
 
 void GameOutputSound(game_state *state, game_sound_output_buffer *sound_buffer, int32 tone_hz) {
   int16 tone_volume = 1000;

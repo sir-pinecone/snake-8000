@@ -21,14 +21,14 @@
    and more!
 */
 
-#include "handmade.h"
+#include "snake_game.h"
 
 #include <windows.h>
 #include <stdio.h>
 #include <xinput.h>
 #include <dsound.h>
 
-#include "win32_handmade.h"
+#include "win32_snake_game.h"
 
 // ---------------------------------------------------------------------------------------
 // Game Globals
@@ -844,7 +844,7 @@ Win32DebugDrawAudio(win32_offscreen_buffer *backbuffer, int32 marker_count,
   }
 }
 
-// In VS, change the exe build directory to w:/handmade-hero/data
+// In VS, change the exe build directory to w:/snake/data
 // Use F11 in Visual Studio to debug
 int32 CALLBACK
 WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 show_code) {
@@ -866,13 +866,13 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
   window_class.lpfnWndProc = Win32MainWindowCallback;
   window_class.hInstance = instance; // or get the instance of global_running window with GetModulehandle(0)
   // window_class.hIcon = ;
-  window_class.lpszClassName = "handmadeHeroWindowClass";
+  window_class.lpszClassName = "SnakeWindowClass";
 
   if (RegisterClassA(&window_class)) {
     HWND window = CreateWindowExA(
         0, //WS_EX_TOPMOST|WS_EX_LAYERED,
         window_class.lpszClassName,
-        "Handmade Hero",
+        "Snake",
         WS_OVERLAPPEDWINDOW|WS_VISIBLE,
         CW_USEDEFAULT, // x
         CW_USEDEFAULT, // y
@@ -923,7 +923,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
       }
 #endif
 
-#if HANDMADE_INTERNAL
+#if SNAKE_INTERNAL
       LPVOID base_address = (LPVOID)Terabytes(2);
 #else
       LPVOID base_address = 0;
@@ -935,8 +935,8 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
 
       char source_game_code_dll_full_path[WIN32_STATE_FILE_NAME_COUNT];
       char temp_game_code_dll_full_path[WIN32_STATE_FILE_NAME_COUNT];
-      Win32RelativeEXEFilePath(&win32_state, "handmade.dll", source_game_code_dll_full_path, sizeof(source_game_code_dll_full_path));
-      Win32RelativeEXEFilePath(&win32_state, "handmade_temp.dll", temp_game_code_dll_full_path, sizeof(temp_game_code_dll_full_path));
+      Win32RelativeEXEFilePath(&win32_state, "snake_game.dll", source_game_code_dll_full_path, sizeof(source_game_code_dll_full_path));
+      Win32RelativeEXEFilePath(&win32_state, "snake_game_temp.dll", temp_game_code_dll_full_path, sizeof(temp_game_code_dll_full_path));
 
       // Initialize game memory
       // TODO create different memory profiles based on the type of computer running this
@@ -1303,7 +1303,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
 
               Win32FillSoundBuffer(&sound_output, byte_to_lock, bytes_to_write, &sound_buffer);
 
-#if HANDMADE_INTERNAL
+#if SNAKE_INTERNAL
               win32_debug_audio_time_marker *marker = &debug_audio_time_markers[debug_audio_time_marker_idx];
               marker->output_play_cursor = play_cursor;
               marker->output_write_cursor = write_cursor;
@@ -1371,7 +1371,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
             last_counter = end_counter;
 
             win32_window_dimension dimension = Win32GetWindowDimension(window);
-#if HANDMADE_INTERNAL
+#if SNAKE_INTERNAL
             int current_debug_audio_time_marker_idx = debug_audio_time_marker_idx - 1;
             int marker_count = ArrayCount(debug_audio_time_markers);
             if (current_debug_audio_time_marker_idx < 0) {
@@ -1387,7 +1387,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
 
             flip_wall_clock = Win32GetWallClock();
 
-#if HANDMADE_INTERNAL
+#if SNAKE_INTERNAL
             // NOTE: this is debug code
             {
               DWORD play_cursor = 0;
@@ -1415,7 +1415,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
                 "%.02fms/f, %.02ff/s, %.02fMc/f\n", ms_per_frame, fps, mega_cycles_per_frame);
             OutputDebugStringA(fps_buffer);
 
-#if HANDMADE_INTERNAL
+#if SNAKE_INTERNAL
             ++debug_audio_time_marker_idx;
             if (debug_audio_time_marker_idx == ArrayCount(debug_audio_time_markers)) {
               debug_audio_time_marker_idx = 0;

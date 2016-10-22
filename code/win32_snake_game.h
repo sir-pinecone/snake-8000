@@ -1,4 +1,4 @@
-#if !defined(WIN32_HANDMADE_H)
+#if !defined(WIN32_SNAKE_GAME_H)
 
 struct win32_offscreen_buffer {
   // NOTE: Pixels are always 32-bit wide, Little Endian 0x XX RR GG BB
@@ -79,5 +79,5 @@ struct win32_input_snapshot {
   bool32 alt_is_down;
 };
 
-#define WIN32_HANDMADE_H
+#define WIN32_SNAKE_GAME_H
 #endif

@@ -1,5 +1,13 @@
-# handmade-hero
-Working through the Handmade Hero project led by Casey Muratori
+# snake
+It's a snake game. Move the snake around and eat the snake foods to grow ur snake into long snake.
+If your snake touch wall then snake is died. If your snake grow so big that the snake is as big as
+snake home then you are won.
+
+---
+
+This is built upon a portion of the Handmade Hero engine, which is a project led by Casey Muratori.
+It's a great project that is a lot of fun to follow along with. He has YouTube screencasts that you
+can watch while typing up the engine based on his guidance. Check it out yo [https://hero.handmade.network/episodes](https://hero.handmade.network/episodes).
 
 # Setup
 
@@ -13,12 +21,12 @@ Working through the Handmade Hero project led by Casey Muratori
   ```
 2. Install Visual Studio 14
 3. Install Git for Windows
-4. Create a shortcut that will boot the game environment. Set its `target` to: `C:\Windows\System32\cmd.exe /k w:\handmade-hero\misc\shell.bat` (replacing the paths if needed). Now you can launch the editor and shell with this shortcut
+4. Create a shortcut that will boot the game environment. Set its `target` to: `C:\Windows\System32\cmd.exe /k w:\snake\misc\shell.bat` (replacing the paths if needed). Now you can launch the editor and shell with this shortcut
 
 # Workflow
 
 1. Make code changes
-2. Compilation must take place inside the code directory. Compile with `./build` - this will place the build files in `../../build/handmade-hero`.
+2. Compilation must take place inside the code directory. Compile with `./build` - this will place the build files in `../../build/snake`.
 3. Run debugger from shell using `./misc/debug` -- this will open Visual Studio with the exe loaded as the solution. Press F5 to start the debugger. You can set breakpoints in the included source file. You can also view the assembly code by right-clicking the source line during execution and then clicking "Go to disassembly".
 
 # Note:

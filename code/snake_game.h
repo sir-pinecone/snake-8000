@@ -1,13 +1,13 @@
-#if !defined(HANDMADE_H)
+#if !defined(SNAKE_GAME_H)
 
 /*
  * NOTE: Build flags
  *
- * HANDMADE_INTERNAL:
+ * SNAKE_INTERNAL:
  *  0 - Build for public release
  *  1 - Build for developer only
  *
- * HANDMADE_SLOW:
+ * SNAKE_SLOW:
  *  0 - No slow code allowed! Frick off, Rick.
  *  1 - Slow code is a-ok. Smokes, let's go.
  */
@@ -41,7 +41,7 @@ typedef double real64;
 // ---------------------------------------------------------------------------------------
 
 // TODO make this assert better
-#if HANDMADE_SLOW
+#if SNAKE_SLOW
 #define Assert(expression) if (!(expression)) { *(int *)0 = 0; }
 #else
 #define Assert(expression)
@@ -108,7 +108,7 @@ struct thread_context {
 // Services that the platform layer provides to the game
 // ---------------------------------------------------------------------------------------
 
-#if HANDMADE_INTERNAL
+#if SNAKE_INTERNAL
 
 /* IMPORTANT:
  *
@@ -273,5 +273,5 @@ struct game_state {
   real32 t_sine;
 };
 
-#define HANDMADE_H
+#define SNAKE_GAME_H
 #endif
