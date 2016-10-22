@@ -283,7 +283,7 @@ struct game_state {
   int tile_size; // treated as a square
   int num_tiles_x;
   int num_tiles_y;
-
+  real32 snake_update_timer;
   real32 t_sine;
 };
 

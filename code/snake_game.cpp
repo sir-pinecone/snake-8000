@@ -164,28 +164,36 @@ void MoveSnakePiece(snake_piece *piece) {
 }
 
 void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
-  snake_state *snake = &state->snake;
-  snake_piece *head = GetSnakeHead(snake);
+  // TODO decrease step speed as snake length increases
+  if (state->snake_update_timer > 0.1f) {
+    state->snake_update_timer = 0;
 
-  if (snake->new_direction != NONE) {
-    head->dir = snake->new_direction;
-    snake->new_direction = NONE;
+    snake_state *snake = &state->snake;
+    snake_piece *head = GetSnakeHead(snake);
+
+    if (snake->new_direction != NONE) {
+      head->dir = snake->new_direction;
+      snake->new_direction = NONE;
+    }
+
+    // TODO move the pieces
+    for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
+      MoveSnakePiece(GetSnakePiece(snake, piece_idx));
+      //snake_piece *next = GetSnakePiece(snake, piece_idx - 1);
+      //current->dir = next->dir;
+    }
+
+    // Check for death
+    if (head->x == 0 || head->x == state->num_tiles_x + 1
+        || head->y == 0 || head->y == state->num_tiles_y + 1) {
+      // TODO dead
+      snake->alive = false;
+      head->x = Max(1, Min(head->x, state->num_tiles_x));
+      head->y = Max(1, Min(head->y, state->num_tiles_y));
+    }
   }
-
-  // TODO move the pieces
-  for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
-    MoveSnakePiece(GetSnakePiece(snake, piece_idx));
-    //snake_piece *next = GetSnakePiece(snake, piece_idx - 1);
-    //current->dir = next->dir;
-  }
-
-  // Check for death
-  if (head->x == 0 || head->x == state->num_tiles_x + 1
-      || head->y == 0 || head->y == state->num_tiles_y + 1) {
-    // TODO dead
-    snake->alive = false;
-    head->x = Max(1, Min(head->x, state->num_tiles_x));
-    head->y = Max(1, Min(head->y, state->num_tiles_y));
+  else {
+    state->snake_update_timer += 0.1f;
   }
 }
 
@@ -283,6 +291,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     snake.alive = true;
 
     state->snake = snake;
+    state->snake_update_timer = 0.0f;
 
     // TODO this may be more appropriate to do in the platform layer
     memory->is_initialized = true;
