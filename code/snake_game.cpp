@@ -163,6 +163,58 @@ void UpdateSnake(game_offscreen_buffer *buffer, snake_state *snake) {
   // TODO MoveSnakePart(head);
 }
 
+void ProcessInput(game_input *input, game_state *state) {
+  for (int controller_idx = 0;
+      controller_idx < ArrayCount(input->controllers);
+      ++controller_idx) {
+    game_controller_input *controller = GetController(input, controller_idx);
+
+    if (controller->is_analog) {
+      /* NOTE:  Use analog movement tuning */
+      state->blue_offset += (int32)(4.0f * controller->stick_avg_x);
+      state->tone_hz = 220 + (int32)(128.0f * controller->stick_avg_y);
+    }
+    else {
+      snake_state *snake = &state->snake;
+
+      /* NOTE: Use digital movement tuning */
+      if (controller->move_left.ended_down) {
+        state->blue_offset -= 1;
+        ChangeSnakeDirection(snake, WEST);
+      }
+
+      if (controller->move_right.ended_down) {
+        state->blue_offset += 1;
+        ChangeSnakeDirection(snake, EAST);
+      }
+
+      if (controller->move_up.ended_down) {
+        state->green_offset -= 1;
+        ChangeSnakeDirection(snake, NORTH);
+      }
+
+      if (controller->move_down.ended_down) {
+        state->green_offset += 1;
+        ChangeSnakeDirection(snake, SOUTH);
+      }
+
+      if (controller->right_shoulder.ended_down && snake->length < ArrayCount(snake->parts)) {
+        ExtendSnake(snake);
+      }
+      else if (controller->left_shoulder.ended_down && snake->length > 1) {
+        snake->length--;
+      }
+    }
+
+    if (controller->action_down.ended_down) {
+      state->red_offset += 1;
+    }
+
+    //state->snake.x += (int32)(4.0f * controller->stick_avg_x);
+    //state->snake.y -= (int32)(4.0f * controller->stick_avg_y);
+  }
+}
+
 // ---------------------------------------------------------------------------------------
 // Game services for the platform layer
 // ---------------------------------------------------------------------------------------
@@ -206,54 +258,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     memory->is_initialized = true;
   }
 
-  for (int controller_idx = 0;
-      controller_idx < ArrayCount(input->controllers);
-      ++controller_idx) {
-    game_controller_input *controller = GetController(input, controller_idx);
-
-    if (controller->is_analog) {
-      /* NOTE:  Use analog movement tuning */
-      state->blue_offset += (int32)(4.0f * controller->stick_avg_x);
-      state->tone_hz = 220 + (int32)(128.0f * controller->stick_avg_y);
-    }
-    else {
-      /* NOTE: Use digital movement tuning */
-      if (controller->move_left.ended_down) {
-        state->blue_offset -= 1;
-        ChangeSnakeDirection(&state->snake, WEST);
-      }
-
-      if (controller->move_right.ended_down) {
-        state->blue_offset += 1;
-        ChangeSnakeDirection(&state->snake, EAST);
-      }
-
-      if (controller->move_up.ended_down) {
-        state->green_offset -= 1;
-        ChangeSnakeDirection(&state->snake, NORTH);
-      }
-
-      if (controller->move_down.ended_down) {
-        state->green_offset += 1;
-        ChangeSnakeDirection(&state->snake, SOUTH);
-      }
-
-      if (controller->right_shoulder.ended_down && state->snake.length < ArrayCount(snake.parts)) {
-        ExtendSnake(&state->snake);
-      }
-      else if (controller->left_shoulder.ended_down && state->snake.length > 1) {
-        state->snake.length -= 1;
-      }
-    }
-
-    if (controller->action_down.ended_down) {
-      state->red_offset += 1;
-    }
-
-    //state->snake.x += (int32)(4.0f * controller->stick_avg_x);
-    //state->snake.y -= (int32)(4.0f * controller->stick_avg_y);
-  }
-
+  ProcessInput(input, state);
   RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
   UpdateSnake(screen_buffer, &state->snake);
   RenderSnake(screen_buffer, &state->snake);
