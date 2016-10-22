@@ -260,11 +260,13 @@ struct dir_tile {
 
 struct snake_state {
   int length;
-  int block_size;
+  int head_tile_x;
+  int head_tile_y;
+
   // TODO remove
   direction new_direction;
   dir_tile dir_tiles[2000];
-  // TODO make this an array of directions instead
+  // TODO better name
   direction parts[20];
 };
 
@@ -276,6 +278,12 @@ struct game_state {
   int32 blue_offset;
   int32 green_offset;
   int32 red_offset;
+
+  int game_width;
+  int game_height;
+  int tile_size; // treated as a square
+  int num_tiles_x;
+  int num_tiles_y;
 
   real32 t_sine;
 };

@@ -55,6 +55,19 @@ void RenderWeirdGradient(game_offscreen_buffer* buffer,
   }
 }
 
+int GetTileIndex(int x, int y, int width, int height) {
+  Assert(x > 0 && y > 0);
+  int x_part = (x - 1) % width;
+  int y_part = (y - 1) % height;
+  int idx = x_part + (width * y_part);
+  return idx;
+}
+
+int GetTilePixel(int tile_n, int num_tiles, int tile_size) {
+  Assert(tile_n > 0 && num_tiles > 0);
+  return ((tile_n - 1) % num_tiles) * tile_size;
+}
+
 void RenderGrid(game_offscreen_buffer* buffer, int grid_item_size) {
   uint8 *row = (uint8 *)buffer->memory;
   for (int32 y = 0; y < buffer->height; ++y) {
@@ -64,10 +77,6 @@ void RenderGrid(game_offscreen_buffer* buffer, int grid_item_size) {
     }
     row += buffer->pitch; // Move the pointer to the start of the next row
   }
-}
-
-int SnakePartSize(snake_state *snake) {
-  return (snake->block_size + 4);
 }
 
 direction * GetSnakePieceDir(snake_state *snake, int index) {
@@ -86,24 +95,37 @@ void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
   snake->new_direction = new_dir;
 }
 
-void RenderSnake(game_offscreen_buffer *buffer, snake_state *snake) {
+void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
   uint8 *end_of_buffer = (uint8 *)buffer->memory + (buffer->height * buffer->pitch);
-  for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
-    /*snake_part *part = GetSnakePieceDir(snake, piece_idx);
-    if (part) {
-      for (int x = part->x; x < part->x + snake->block_size; ++x) {
+  snake_state *snake = &state->snake;
+
+  int start_x = snake->head_tile_x;
+  int start_y = snake->head_tile_y;
+  int prev_direction = NONE;
+
+  for (int piece_idx = 0; piece_idx < 1; ++piece_idx) { //snake->length; ++piece_idx) {
+    direction *piece_dir = GetSnakePieceDir(snake, piece_idx);
+    if (piece_dir) {
+      // we can get the side to draw on by looking at the previous direct and then drawing
+      // at the opposing edge.
+      int x_start = (prev_direction == NONE) ? start_x : start_x; // TODO get tile in opposite direction of previous_dir
+      int y_start = (prev_direction == NONE) ? start_y : start_y; // TODO get tile in opposite direction of previous_dir
+      int x_pixel = GetTilePixel(x_start, state->num_tiles_x, state->tile_size);
+      int y_pixel = GetTilePixel(y_start, state->num_tiles_y, state->tile_size);
+
+      for (int x = x_pixel; x < x_pixel + state->tile_size; ++x) {
         uint8 *pixel = (uint8 *)buffer->memory +
                        (x * buffer->bytes_per_pixel) +
-                       (part->y * buffer->pitch);
+                       (y_pixel * buffer->pitch);
 
-        for (int y = part->y; y < part->y + snake->block_size; ++y) {
+        for (int y = y_pixel; y < y_pixel + state->tile_size; ++y) {
           if ((pixel >= buffer->memory) && ((pixel + 4) <= end_of_buffer)) {
             *(uint32 *)pixel = RGBColor(110,255,180);
           }
           pixel += buffer->pitch;
         }
       }
-    }*/
+    }
   }
 }
 
@@ -236,16 +258,20 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
       memory->DEBUGPlatformFreeFileMemory(thread, file.content);
     }
 
-    snake.block_size = 25;
-    snake.new_direction = EAST;
+    state->game_width = screen_buffer->width;
+    state->game_height = screen_buffer->height;
+    state->tile_size = 25;
+    state->num_tiles_x = (int)(state->game_width / state->tile_size);
+    state->num_tiles_y = (int)(state->game_height / state->tile_size);
+
+    snake.new_direction = NONE;
 
     // Start with a head
     snake.length = 1;
-    snake_part head = {};
     // TODO pick random starting pos
-    head.x = 200; //SnakePartSize(&snake) + 200;
-    head.y = 200;
-    head.dir = EAST;
+    snake.head_tile_x = 8;
+    snake.head_tile_y = 16;
+
     snake.parts[0] = EAST;
 
     state->snake = snake;
@@ -261,7 +287,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   ProcessInput(input, state);
   RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
   UpdateSnake(screen_buffer, &state->snake);
-  RenderSnake(screen_buffer, &state->snake);
+  RenderSnake(screen_buffer, state);
 }
 
 // extern "C" tells the compiler to use the old C naming process which will preserve the
