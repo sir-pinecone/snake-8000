@@ -126,28 +126,31 @@ void MoveSnakePiece(snake_piece *piece, direction in_direction) {
 void ExtendSnake(snake_state *snake, direction in_direction) {
   Assert((snake->length - 1) >= 0);
   if (snake->length < ArrayCount(snake->pieces)) {
-    snake_piece *last = GetSnakePiece(snake, snake->length - 1);
+    snake_piece *tail = GetSnakePiece(snake, snake->length - 1);
     snake_piece new_piece;
-    new_piece.x = last->x;
-    new_piece.y = last->y;
+    new_piece.x = tail->x;
+    new_piece.y = tail->y;
     // We want to place the piece in the correct spot
     MoveSnakePiece(&new_piece, in_direction);
-    new_piece.dir = last->dir;
+    new_piece.dir = tail->dir;
     snake->pieces[snake->length++] = new_piece;
   }
+  // TODO ELSE YOU WIN!
 }
 
 void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
   snake_piece *head = GetSnakeHead(snake);
   if (head->dir != new_dir && snake->new_direction != new_dir) {
     snake->new_direction = new_dir;
-    // Record the path change
-    Assert(snake->num_dir_recordings < ArrayCount(snake->dir_recordings));
-    dir_change_record record = {};
-    record.dir = new_dir;
-    record.x = head->x;
-    record.y = head->y;
-    snake->dir_recordings[snake->num_dir_recordings++] = record;
+    if (snake->length > 1) {
+      // Record the path change
+      Assert(snake->num_dir_recordings < ArrayCount(snake->dir_recordings));
+      dir_change_record record = {};
+      record.dir = new_dir;
+      record.x = head->x;
+      record.y = head->y;
+      snake->dir_recordings[snake->num_dir_recordings++] = record;
+    }
   }
 }
 
@@ -164,12 +167,15 @@ void RenderRecordingSpot(game_offscreen_buffer *buffer, game_state *state) {
 }
 
 void RenderFood(game_offscreen_buffer *buffer, game_state *state) {
+  uint32 color = RGBColor(0, 255, 0);
   snake_food *food = &state->foods[0];
-  if (food) {
-    uint32 color = RGBColor(0, 255, 0);
-    int x_pixel = GetTilePixel(food->x, state->num_tiles_x, state->tile_size);
-    int y_pixel = GetTilePixel(food->y, state->num_tiles_y, state->tile_size);
-    DrawBlock(buffer, color, x_pixel, y_pixel, state->tile_size);
+  for (int idx = 0; idx < state->num_foods; ++idx) {
+    snake_food *food = &state->foods[idx];
+    if (food) {
+      int x_pixel = GetTilePixel(food->x, state->num_tiles_x, state->tile_size);
+      int y_pixel = GetTilePixel(food->y, state->num_tiles_y, state->tile_size);
+      DrawBlock(buffer, color, x_pixel, y_pixel, state->tile_size);
+    }
   }
 }
 
@@ -188,7 +194,7 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
 }
 
 void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
-  // TODO fix snek bounce at bottom of screen ... or not? could just kill him
+  // TODO fix snek bounce - it's bouncing off the direction change tiles
   // TODO decrease step speed as snake length increases
   if (state->snake_update_timer > 0.2f) {
     state->snake_update_timer = 0;
@@ -215,11 +221,17 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
           piece->dir = record->dir;
 
           if (last_piece) {
-            // Shift recordings
-            for (int i = 0; i < snake->num_dir_recordings - 1; ++i) {
-              snake->dir_recordings[i] = snake->dir_recordings[i + 1];
+            // Delete the recording
+            for (int i = 0; i < snake->num_dir_recordings; ++i) {
+              if (i == snake->num_dir_recordings - 1) {
+                snake->num_dir_recordings--;
+                snake->dir_recordings[i] = {};
+              }
+              else {
+                // Shift
+                snake->dir_recordings[i] = snake->dir_recordings[i + 1];
+              }
             }
-            snake->num_dir_recordings--;
           }
         }
       }
@@ -237,9 +249,38 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
 
     // TODO check for food collision - if hit then delete food and extend the snake
     snake_piece *tail = &snake->pieces[snake->length - 1];
-    snake_food *food = &state->foods[0];
-    if (food && tail->x == food->x && tail->y == food->y) {
-      state->foods[0] = {};
+    for (int idx = 0; idx < state->num_foods; ++idx) {
+      snake_food *food = &state->foods[idx];
+      if (food && tail->x == food->x && tail->y == food->y) {
+        // TODO clean up this scanning, deletion code
+        for (int i = idx; i < state->num_foods; ++i) {
+          if (i == state->num_foods - 1) {
+            // Delete food
+            state->num_foods--;
+            state->foods[i] = {};
+          }
+          else {
+            // Shift food
+            state->foods[i] = state->foods[i + 1];
+          }
+        }
+
+        direction new_piece_dir = NONE;
+        if (tail->dir == NORTH) {
+          new_piece_dir = SOUTH;
+        }
+        else if (tail->dir == SOUTH) {
+          new_piece_dir = NORTH;
+        }
+        else if (tail->dir == WEST) {
+          new_piece_dir = EAST;
+        }
+        else if (tail->dir == EAST) {
+          new_piece_dir = WEST;
+        }
+
+        ExtendSnake(snake, new_piece_dir);
+      }
     }
   }
   else {
@@ -349,7 +390,17 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     snake_food food = {};
     food.x = 25;
     food.y = 25;
+    snake_food food2 = {};
+    food2.x = 45;
+    food2.y = 8;
+    snake_food food3 = {};
+    food3.x = 15;
+    food3.y = 5;
+
     state->foods[0] = food;
+    state->foods[1] = food2;
+    state->foods[2] = food3;
+    state->num_foods = 3;
 
     // TODO do we really need 1-indexed tiles?
 

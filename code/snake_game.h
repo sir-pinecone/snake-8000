@@ -279,6 +279,7 @@ struct snake_food {
 struct game_state {
   snake_state snake;
   snake_food foods[10];
+  int num_foods;
 
   int32 tone_hz;
   int32 blue_offset;
