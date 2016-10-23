@@ -123,7 +123,7 @@ void MoveSnakePiece(snake_piece *piece, direction in_direction) {
   }
 }
 
-void ExtendSnake(snake_state *snake, direction in_direction) {
+void ExtendSnake(snake_state *snake) {
   Assert((snake->length - 1) >= 0);
   if (snake->length < ArrayCount(snake->pieces)) {
     snake_piece *tail = GetSnakePiece(snake, snake->length - 1);
@@ -131,7 +131,20 @@ void ExtendSnake(snake_state *snake, direction in_direction) {
     new_piece.x = tail->x;
     new_piece.y = tail->y;
     // We want to place the piece in the correct spot
-    MoveSnakePiece(&new_piece, in_direction);
+    direction new_piece_dir = NONE;
+    if (tail->dir == NORTH) {
+      new_piece_dir = SOUTH;
+    }
+    else if (tail->dir == SOUTH) {
+      new_piece_dir = NORTH;
+    }
+    else if (tail->dir == WEST) {
+      new_piece_dir = EAST;
+    }
+    else if (tail->dir == EAST) {
+      new_piece_dir = WEST;
+    }
+    MoveSnakePiece(&new_piece, new_piece_dir);
     new_piece.dir = tail->dir;
     snake->pieces[snake->length++] = new_piece;
   }
@@ -241,10 +254,19 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
     // TODO check for collision against self
     if (head->x == 0 || head->x == state->num_tiles_x + 1
         || head->y == 0 || head->y == state->num_tiles_y + 1) {
-      // TODO dead
       snake->alive = false;
       head->x = Max(1, Min(head->x, state->num_tiles_x));
       head->y = Max(1, Min(head->y, state->num_tiles_y));
+    }
+    // Check body collision
+    else if (snake->length > 1) {
+      for (int idx = 1; idx < snake->length; ++idx) {
+        snake_piece *piece = &snake->pieces[idx];
+        // TODO add if (<pointer>) checks to other loops
+        if (piece && piece->x == head->x && piece->y == head->y) {
+          snake->alive = false;
+        }
+      }
     }
 
     // TODO check for food collision - if hit then delete food and extend the snake
@@ -253,6 +275,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
       snake_food *food = &state->foods[idx];
       if (food && tail->x == food->x && tail->y == food->y) {
         // TODO clean up this scanning, deletion code
+        // TODO BUG: looks weird when you move the moment you eat a food
         for (int i = idx; i < state->num_foods; ++i) {
           if (i == state->num_foods - 1) {
             // Delete food
@@ -264,22 +287,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
             state->foods[i] = state->foods[i + 1];
           }
         }
-
-        direction new_piece_dir = NONE;
-        if (tail->dir == NORTH) {
-          new_piece_dir = SOUTH;
-        }
-        else if (tail->dir == SOUTH) {
-          new_piece_dir = NORTH;
-        }
-        else if (tail->dir == WEST) {
-          new_piece_dir = EAST;
-        }
-        else if (tail->dir == EAST) {
-          new_piece_dir = WEST;
-        }
-
-        ExtendSnake(snake, new_piece_dir);
+        ExtendSnake(snake);
       }
     }
   }
@@ -323,7 +331,7 @@ void ProcessInput(game_input *input, game_state *state) {
       }
 
       if (controller->right_shoulder.ended_down && snake->length < ArrayCount(snake->pieces)) {
-        ExtendSnake(snake, WEST);
+        ExtendSnake(snake);
       }
       else if (controller->left_shoulder.ended_down && snake->length > 1) {
         snake->length--;
@@ -366,13 +374,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 
     state->game_width = screen_buffer->width;
     state->game_height = screen_buffer->height;
-    state->tile_size = 25;
+    state->tile_size = 25; // TODO investigate bug when this is < 10 ish
     state->num_tiles_x = (int)(state->game_width / state->tile_size);
     state->num_tiles_y = (int)(state->game_height / state->tile_size);
 
     // TODO implement no walls mode
-
     // TODO pick random starting pos
+
     snake_state snake = {};
     snake.new_direction = NONE;
     snake.num_dir_recordings = 0;
@@ -403,7 +411,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     state->num_foods = 3;
 
     // TODO do we really need 1-indexed tiles?
-
     // TODO this may be more appropriate to do in the platform layer
     memory->is_initialized = true;
   }
@@ -411,7 +418,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   ProcessInput(input, state);
   // RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
   RenderGrid(screen_buffer, state);
-  UpdateSnake(screen_buffer, state);
+  snake_state *snake = &state->snake;
+  if (snake->alive) {
+    UpdateSnake(screen_buffer, state);
+  }
   RenderSnake(screen_buffer, state);
   RenderFood(screen_buffer, state);
   RenderRecordingSpot(screen_buffer, state);
