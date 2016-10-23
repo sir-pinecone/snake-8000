@@ -266,7 +266,7 @@ struct snake_state {
   bool32 alive;
   direction new_direction;
   dir_change_record dir_recordings[2000];
-  uint32 dir_recording_index;
+  int num_dir_recordings;
   snake_piece pieces[20];
 };
 

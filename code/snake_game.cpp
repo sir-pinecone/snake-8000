@@ -142,12 +142,12 @@ void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
   if (head->dir != new_dir && snake->new_direction != new_dir) {
     snake->new_direction = new_dir;
     // Record the path change
-    Assert(snake->dir_recording_index < ArrayCount(snake->dir_recordings));
+    Assert(snake->num_dir_recordings < ArrayCount(snake->dir_recordings));
     dir_change_record record = {};
     record.dir = new_dir;
     record.x = head->x;
     record.y = head->y;
-    snake->dir_recordings[snake->dir_recording_index++] = record;
+    snake->dir_recordings[snake->num_dir_recordings++] = record;
   }
 }
 
@@ -186,11 +186,30 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
     for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
       snake_piece *piece = GetSnakePiece(snake, piece_idx);
       MoveSnakePiece(piece, piece->dir);
+      // TODO use the index to decide how many direction recordings to check.
+      // Look at oldest recording first.
+      // For now we do a simple check all loop
+      bool32 last_piece = piece_idx == snake->length - 1;
+      for (int idx = 0; idx < snake->num_dir_recordings; ++idx) {
+        dir_change_record *record = &snake->dir_recordings[idx];
+        if (piece->x == record->x && piece->y == record->y) {
+          piece->dir = record->dir;
+
+          if (last_piece) {
+            // Shift recordings
+            for (int i = 0; i < snake->num_dir_recordings - 1; ++i) {
+              snake->dir_recordings[i] = snake->dir_recordings[i + 1];
+            }
+            snake->num_dir_recordings--;
+          }
+        }
+      }
       //snake_piece *next = GetSnakePiece(snake, piece_idx - 1);
       //current->dir = next->dir;
     }
 
     // Check for death
+    // TODO check for collision against self
     if (head->x == 0 || head->x == state->num_tiles_x + 1
         || head->y == 0 || head->y == state->num_tiles_y + 1) {
       // TODO dead
@@ -198,6 +217,8 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
       head->x = Max(1, Min(head->x, state->num_tiles_x));
       head->y = Max(1, Min(head->y, state->num_tiles_y));
     }
+
+    // TODO check for food collision - if hit then delete food and extend the snake
   }
   else {
     state->snake_update_timer += 0.1f;
@@ -289,7 +310,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     // TODO pick random starting pos
     snake_state snake = {};
     snake.new_direction = NONE;
-    snake.dir_recording_index = 0;
+    snake.num_dir_recordings = 0;
     snake_piece head = {};
     head.dir = SOUTH;
     head.x = 1;
