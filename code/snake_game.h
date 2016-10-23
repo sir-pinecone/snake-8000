@@ -270,9 +270,15 @@ struct snake_state {
   snake_piece pieces[20];
 };
 
+struct snake_food {
+  int x;
+  int y;
+};
+
 /* NOTE: might relocate this later since the platform layer doesn't need to know about it at all */
 struct game_state {
   snake_state snake;
+  snake_food foods[10];
 
   int32 tone_hz;
   int32 blue_offset;

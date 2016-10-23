@@ -89,7 +89,7 @@ void RenderGrid(game_offscreen_buffer* buffer, game_state *state) {
     int y_pixel = GetTilePixel(y, state->num_tiles_y, state->tile_size);
     for (int x = 1; x <= state->num_tiles_x; ++x) {
       int x_pixel = GetTilePixel(x, state->num_tiles_x, state->tile_size);
-      DrawBlock(buffer, RGBColor(255,150,200), x_pixel, y_pixel, state->tile_size);
+      DrawBlock(buffer, RGBColor(200, 200, 200), x_pixel, y_pixel, state->tile_size);
     }
   }
 }
@@ -151,14 +151,20 @@ void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
   }
 }
 
+void RenderFood(game_offscreen_buffer *buffer, game_state *state) {
+  snake_food *food = &state->foods[0];
+  if (food) {
+    uint32 color = RGBColor(0, 255, 0);
+    int x_pixel = GetTilePixel(food->x, state->num_tiles_x, state->tile_size);
+    int y_pixel = GetTilePixel(food->y, state->num_tiles_y, state->tile_size);
+    DrawBlock(buffer, color, x_pixel, y_pixel, state->tile_size);
+  }
+}
+
 void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
   snake_state *snake = &state->snake;
   snake_piece *head = GetSnakeHead(snake);
-
-  int start_x = head->x;
-  int start_y = head->y;
-  uint32 color = snake->alive ? RGBColor(110, 250, 150) : RGBColor(255, 0, 0);
-
+  uint32 color = snake->alive ? RGBColor(20, 90, 255) : RGBColor(255, 0, 0);
   for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) { //snake->length; ++piece_idx) {
     snake_piece *piece = GetSnakePiece(snake, piece_idx);
     if (piece) {
@@ -170,8 +176,9 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
 }
 
 void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
+  // TODO fix snek bounce at bottom of screen ... or not? could just kill him
   // TODO decrease step speed as snake length increases
-  if (state->snake_update_timer > 0.1f) {
+  if (state->snake_update_timer > 0.2f) {
     state->snake_update_timer = 0;
 
     snake_state *snake = &state->snake;
@@ -182,7 +189,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
       snake->new_direction = NONE;
     }
 
-    // TODO move the pieces
+    // Move the pieces
     for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
       snake_piece *piece = GetSnakePiece(snake, piece_idx);
       MoveSnakePiece(piece, piece->dir);
@@ -204,8 +211,6 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
           }
         }
       }
-      //snake_piece *next = GetSnakePiece(snake, piece_idx - 1);
-      //current->dir = next->dir;
     }
 
     // Check for death
@@ -219,6 +224,11 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
     }
 
     // TODO check for food collision - if hit then delete food and extend the snake
+    snake_piece *tail = &snake->pieces[snake->length - 1];
+    snake_food *food = &state->foods[0];
+    if (food && tail->x == food->x && tail->y == food->y) {
+      state->foods[0] = {};
+    }
   }
   else {
     state->snake_update_timer += 0.1f;
@@ -307,12 +317,14 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     state->num_tiles_x = (int)(state->game_width / state->tile_size);
     state->num_tiles_y = (int)(state->game_height / state->tile_size);
 
+    // TODO implement no walls mode
+
     // TODO pick random starting pos
     snake_state snake = {};
     snake.new_direction = NONE;
     snake.num_dir_recordings = 0;
     snake_piece head = {};
-    head.dir = SOUTH;
+    head.dir = EAST;
     head.x = 1;
     head.y = 1;
     snake.pieces[0] = head;
@@ -321,6 +333,13 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 
     state->snake = snake;
     state->snake_update_timer = 0.0f;
+
+    snake_food food = {};
+    food.x = 25;
+    food.y = 25;
+    state->foods[0] = food;
+
+    // TODO do we really need 1-indexed tiles?
 
     // TODO this may be more appropriate to do in the platform layer
     memory->is_initialized = true;
@@ -331,6 +350,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   RenderGrid(screen_buffer, state);
   UpdateSnake(screen_buffer, state);
   RenderSnake(screen_buffer, state);
+  RenderFood(screen_buffer, state);
 }
 
 // extern "C" tells the compiler to use the old C naming process which will preserve the
