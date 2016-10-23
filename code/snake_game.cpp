@@ -151,6 +151,18 @@ void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
   }
 }
 
+// TODO LYNDA create an x and y version of GetTilePixel()
+void RenderRecordingSpot(game_offscreen_buffer *buffer, game_state *state) {
+  uint32 color = RGBColor(0, 255, 255);
+  snake_state *snake = &state->snake;
+  for (int idx = 0; idx < snake->num_dir_recordings; ++idx) {
+    dir_change_record *record = &snake->dir_recordings[idx];
+    int x_pixel = GetTilePixel(record->x, state->num_tiles_x, state->tile_size);
+    int y_pixel = GetTilePixel(record->y, state->num_tiles_y, state->tile_size);
+    DrawBlock(buffer, color, x_pixel, y_pixel, state->tile_size);
+  }
+}
+
 void RenderFood(game_offscreen_buffer *buffer, game_state *state) {
   snake_food *food = &state->foods[0];
   if (food) {
@@ -351,6 +363,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   UpdateSnake(screen_buffer, state);
   RenderSnake(screen_buffer, state);
   RenderFood(screen_buffer, state);
+  RenderRecordingSpot(screen_buffer, state);
 }
 
 // extern "C" tells the compiler to use the old C naming process which will preserve the
