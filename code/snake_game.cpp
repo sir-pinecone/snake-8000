@@ -269,12 +269,11 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
       }
     }
 
-    // TODO check for food collision - if hit then delete food and extend the snake
     snake_piece *tail = &snake->pieces[snake->length - 1];
     for (int idx = 0; idx < state->num_foods; ++idx) {
       snake_food *food = &state->foods[idx];
       if (food && tail->x == food->x && tail->y == food->y) {
-        // TODO clean up this scanning, deletion code
+        // TODO refactor this type of scanning/deletion code
         // TODO BUG: looks weird when you move the moment you eat a food
         for (int i = idx; i < state->num_foods; ++i) {
           if (i == state->num_foods - 1) {
