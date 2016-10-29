@@ -254,9 +254,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
         }
       }
     }
-
-    // Check for death
-    // TODO check for collision against self
+    // Check for collision with walls
     if (head->x == 0 || head->x == state->num_tiles_x + 1
         || head->y == 0 || head->y == state->num_tiles_y + 1) {
       snake->alive = false;
@@ -266,8 +264,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
     // Check body collision
     else if (snake->length > 1) {
       for (int idx = 1; idx < snake->length; ++idx) {
-        snake_piece *piece = &snake->pieces[idx];
-        // TODO add if (<pointer>) checks to other loops
+        snake_piece *piece = GetSnakePiece(snake, idx);
         if (piece && piece->x == head->x && piece->y == head->y) {
           snake->alive = false;
         }
@@ -298,6 +295,39 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
   else {
     state->snake_update_timer += 0.1f;
   }
+}
+
+void ResetGame(game_state *state) {
+  // TODO implement no walls mode
+  // TODO pick random starting pos
+  snake_state snake = {};
+  snake.new_direction = NONE;
+  snake.num_dir_recordings = 0;
+  snake_piece head = {};
+  head.dir = EAST;
+  head.x = 1;
+  head.y = 1;
+  snake.pieces[0] = head;
+  snake.length = 1;
+  snake.alive = true;
+
+  state->snake = snake;
+  state->snake_update_timer = 0.0f;
+
+  snake_food food = {};
+  food.x = 25;
+  food.y = 25;
+  snake_food food2 = {};
+  food2.x = 45;
+  food2.y = 8;
+  snake_food food3 = {};
+  food3.x = 15;
+  food3.y = 5;
+
+  state->foods[0] = food;
+  state->foods[1] = food2;
+  state->foods[2] = food3;
+  state->num_foods = 3;
 }
 
 void ProcessInput(game_input *input, game_state *state) {
@@ -344,7 +374,12 @@ void ProcessInput(game_input *input, game_state *state) {
 
     if (controller->action_down.ended_down) {
       state->red_offset += 1;
-      snake->alive = true;
+      if (snake->alive == false) {
+        ResetGame(state);
+      }
+      else {
+        // TODO kill the window
+      }
     }
 
     //state->snake.x += (int32)(4.0f * controller->stick_avg_x);
@@ -382,37 +417,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     state->num_tiles_x = (int)(state->game_width / state->tile_size);
     state->num_tiles_y = (int)(state->game_height / state->tile_size);
 
-    // TODO implement no walls mode
-    // TODO pick random starting pos
-
-    snake_state snake = {};
-    snake.new_direction = NONE;
-    snake.num_dir_recordings = 0;
-    snake_piece head = {};
-    head.dir = EAST;
-    head.x = 1;
-    head.y = 1;
-    snake.pieces[0] = head;
-    snake.length = 1;
-    snake.alive = true;
-
-    state->snake = snake;
-    state->snake_update_timer = 0.0f;
-
-    snake_food food = {};
-    food.x = 25;
-    food.y = 25;
-    snake_food food2 = {};
-    food2.x = 45;
-    food2.y = 8;
-    snake_food food3 = {};
-    food3.x = 15;
-    food3.y = 5;
-
-    state->foods[0] = food;
-    state->foods[1] = food2;
-    state->foods[2] = food3;
-    state->num_foods = 3;
+    ResetGame(state);
 
     // TODO do we really need 1-indexed tiles?
     // TODO this may be more appropriate to do in the platform layer
