@@ -1372,6 +1372,8 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
 
             win32_window_dimension dimension = Win32GetWindowDimension(window);
 #if SNAKE_INTERNAL
+            /*
+             * NOTE: temporarily disabling this
             int current_debug_audio_time_marker_idx = debug_audio_time_marker_idx - 1;
             int marker_count = ArrayCount(debug_audio_time_markers);
             if (current_debug_audio_time_marker_idx < 0) {
@@ -1379,6 +1381,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
             }
             Win32DebugDrawAudio(&global_backbuffer, marker_count, debug_audio_time_markers,
                                 current_debug_audio_time_marker_idx, &sound_output, target_seconds_per_frame);
+            */
 #endif
 
             HDC device_context = GetDC(window);
