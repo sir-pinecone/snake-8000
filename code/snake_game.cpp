@@ -238,6 +238,9 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
       snake->new_direction = NONE;
     }
 
+    // TODO don't move the head if the next spot is the wall. Instead, kill the snake and
+    // don't bother moving the body pieces at all
+
     // Move the head
     MoveSnakePiece(head, head->dir);
 
@@ -314,9 +317,10 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
   }
 }
 
-void ResetGame(game_state *state) {
+void ResetGame(thread_context *thread, game_memory *memory, game_state *state) {
   // TODO implement no walls mode
   // TODO pick random starting pos
+  state->reset_game = false;
   snake_state snake = {};
   snake.new_direction = NONE;
   snake.num_dir_recordings = 0;
@@ -392,7 +396,7 @@ void ProcessInput(game_input *input, game_state *state) {
     if (controller->action_down.ended_down) {
       state->red_offset += 1;
       if (snake->alive == false) {
-        ResetGame(state);
+        state->reset_game = true;
       }
       else {
         // TODO kill the window
@@ -424,6 +428,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
       memory->DEBUGPlatformFreeFileMemory(thread, file.content);
     }
 
+    state->rand_seed = memory->DEBUGPlatformRandomNumber(thread, 0, 2, 8);
     state->tone_hz = 220;
     state->t_sine = 0.0f;
     state->red_offset = 1;
@@ -434,7 +439,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     state->num_tiles_x = (int)(state->game_width / state->tile_size);
     state->num_tiles_y = (int)(state->game_height / state->tile_size);
 
-    ResetGame(state);
+    ResetGame(thread, memory, state);
 
     // TODO do we really need 1-indexed tiles?
     // TODO this may be more appropriate to do in the platform layer
@@ -442,15 +447,21 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   }
 
   ProcessInput(input, state);
-  // RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
-  RenderGrid(screen_buffer, state);
-  snake_state *snake = &state->snake;
-  if (snake->alive) {
-    UpdateSnake(screen_buffer, state);
+
+  if (state->reset_game) {
+    ResetGame(thread, memory, state);
   }
-  RenderSnake(screen_buffer, state);
-  RenderFood(screen_buffer, state);
-  RenderRecordingSpot(screen_buffer, state);
+  else {
+    // RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
+    RenderGrid(screen_buffer, state);
+    snake_state *snake = &state->snake;
+    if (snake->alive) {
+      UpdateSnake(screen_buffer, state);
+    }
+    RenderSnake(screen_buffer, state);
+    RenderFood(screen_buffer, state);
+    RenderRecordingSpot(screen_buffer, state);
+  }
 }
 
 // extern "C" tells the compiler to use the old C naming process which will preserve the

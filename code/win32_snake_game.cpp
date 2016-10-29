@@ -66,6 +66,29 @@ void Win32RelativeEXEFilePath(win32_platform_state *state, char *filename, char 
             dest, dest_count);
 }
 
+inline LARGE_INTEGER
+Win32GetWallClock() {
+  LARGE_INTEGER result;
+  QueryPerformanceCounter(&result);
+  return result;
+}
+
+inline real32
+Win32GetSecondsElapsed(LARGE_INTEGER start, LARGE_INTEGER end) {
+  real32 result = ((real32)(end.QuadPart - start.QuadPart) /
+                   (real32)global_perf_count_freq);
+  return result;
+}
+
+// ---------------------------------------------------------------------------------------
+// Random Number Generators
+// ---------------------------------------------------------------------------------------
+
+DEBUG_PLATFORM_RANDOM_NUMBER(DEBUGPlatformRandomNumber) {
+  LARGE_INTEGER c = Win32GetWallClock();
+  return max - min;
+}
+
 // ---------------------------------------------------------------------------------------
 // File I/O
 // ---------------------------------------------------------------------------------------
@@ -744,20 +767,6 @@ Win32ProcessPendingMessages(win32_platform_state *state,
   }
 }
 
-inline LARGE_INTEGER
-Win32GetWallClock() {
-  LARGE_INTEGER result;
-  QueryPerformanceCounter(&result);
-  return result;
-}
-
-inline real32
-Win32GetSecondsElapsed(LARGE_INTEGER start, LARGE_INTEGER end) {
-  real32 result = ((real32)(end.QuadPart - start.QuadPart) /
-                   (real32)global_perf_count_freq);
-  return result;
-}
-
 internal void
 Win32DebugDrawVertical(win32_offscreen_buffer *backbuffer,
                        int32 x, int32 top, int32 bottom, uint32 color) {
@@ -945,6 +954,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
       game_store.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
       game_store.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
       game_store.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
+      game_store.DEBUGPlatformRandomNumber = DEBUGPlatformRandomNumber;
 
       game_store.permanent_storage_size = Megabytes(64);
       game_store.temp_storage_size = Megabytes(500); // NOTE: Reduced from 1 GB strictly for live loop editing performance
