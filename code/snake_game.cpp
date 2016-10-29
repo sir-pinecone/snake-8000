@@ -155,17 +155,19 @@ void ExtendSnake(snake_state *snake) {
 }
 
 void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
-  snake_piece *head = GetSnakeHead(snake);
-  if (head->dir != new_dir && snake->new_direction != new_dir) {
-    snake->new_direction = new_dir;
-    if (snake->length > 1) {
-      // Record the path change
-      Assert(snake->num_dir_recordings < ArrayCount(snake->dir_recordings));
-      dir_change_record record = {};
-      record.dir = new_dir;
-      record.x = head->x;
-      record.y = head->y;
-      snake->dir_recordings[snake->num_dir_recordings++] = record;
+  if (snake->alive) {
+    snake_piece *head = GetSnakeHead(snake);
+    if (head->dir != new_dir && snake->new_direction != new_dir) {
+      snake->new_direction = new_dir;
+      if (snake->length > 1) {
+        // Record the path change
+        Assert(snake->num_dir_recordings < ArrayCount(snake->dir_recordings));
+        dir_change_record record = {};
+        record.dir = new_dir;
+        record.x = head->x;
+        record.y = head->y;
+        snake->dir_recordings[snake->num_dir_recordings++] = record;
+      }
     }
   }
 }
