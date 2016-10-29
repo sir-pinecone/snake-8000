@@ -229,7 +229,7 @@ real32 StepSpeed(snake_state *snake) {
 void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
   // TODO use real time step with passed in delta
   snake_state *snake = &state->snake;
-  if (state->snake_update_timer > 0.3f) {
+  if (state->snake_update_timer > 0.12f) {
     state->snake_update_timer = 0;
     snake_piece *head = GetSnakeHead(snake);
 
