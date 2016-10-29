@@ -222,6 +222,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
     state->snake_update_timer = 0;
     snake_piece *head = GetSnakeHead(snake);
 
+    // TODO don't allow the head to move backwards into itself
     if (snake->new_direction != NONE) {
       head->dir = snake->new_direction;
       snake->new_direction = NONE;
@@ -231,7 +232,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
     MoveSnakePiece(head, head->dir);
 
     // Move the body pieces
-    for (int piece_idx = 1; piece_idx <= snake->length; ++piece_idx) {
+    for (int piece_idx = 1; piece_idx < snake->length; ++piece_idx) {
       snake_piece *piece = GetSnakePiece(snake, piece_idx);
       MoveSnakePiece(piece, piece->dir);
       // TODO use the index to determine how many direction recordings need to be checked
