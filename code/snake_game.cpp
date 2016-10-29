@@ -167,7 +167,7 @@ void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
     snake_piece *head = GetSnakeHead(snake);
     direction inverse_head_dir = OppositeDirection(head->dir);
     if (head->dir != new_dir &&
-        new_dir != inverse_head_dir &&
+        (new_dir != inverse_head_dir || snake->length == 1) &&
         snake->new_direction != new_dir) {
       snake->new_direction = new_dir;
       if (snake->length > 1) {
