@@ -106,6 +106,28 @@ snake_piece * GetSnakeHead(snake_state *snake) {
   return GetSnakePiece(snake, 0);
 }
 
+int SnakePieceNextX(snake_piece *piece) {
+  direction dir = piece->dir;
+  if (dir == EAST) {
+    return piece->x + 1;
+  }
+  else if (dir == WEST) {
+    return piece->x - 1;
+  }
+  return piece->x;
+}
+
+int SnakePieceNextY(snake_piece *piece) {
+  direction dir = piece->dir;
+  if (dir == SOUTH) {
+    return piece->y + 1;
+  }
+  else if (dir == NORTH) {
+    return piece->y - 1;
+  }
+  return piece->y;
+}
+
 void MoveSnakePiece(snake_piece *piece, direction in_direction) {
   switch(in_direction) {
     case NORTH: {
@@ -212,12 +234,14 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
   snake_state *snake = &state->snake;
   snake_piece *head = GetSnakeHead(snake);
   uint32 color = snake->alive ? RGBColor(20, 90, 255) : RGBColor(255, 0, 0);
-  for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) { //snake->length; ++piece_idx) {
+  uint32 head_color = RGBColor(100, 90, 235);
+  for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
     snake_piece *piece = GetSnakePiece(snake, piece_idx);
     if (piece) {
       int x_pixel = GetTilePixel(piece->x, state->num_tiles_x, state->tile_size);
       int y_pixel = GetTilePixel(piece->y, state->num_tiles_y, state->tile_size);
-      DrawBlock(buffer, color, x_pixel, y_pixel, state->tile_size);
+      uint32 c = (piece_idx == 0) ? head_color : color;
+      DrawBlock(buffer, c, x_pixel, y_pixel, state->tile_size);
     }
   }
 }
@@ -238,76 +262,82 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
       snake->new_direction = NONE;
     }
 
-    // TODO don't move the head if the next spot is the wall. Instead, kill the snake and
-    // don't bother moving the body pieces at all
+    {
+      // Check if the next movement position results in death
+      int next_x = SnakePieceNextX(head);
+      int next_y = SnakePieceNextY(head);
 
-    // Move the head
-    MoveSnakePiece(head, head->dir);
+      // Check for collision with walls
+      if (next_x == 0 || next_x == state->num_tiles_x + 1
+          || next_y == 0 || next_y == state->num_tiles_y + 1) {
+        snake->alive = false;
+        //head->x = Max(1, Min(head->x, state->num_tiles_x));
+        //head->y = Max(1, Min(head->y, state->num_tiles_y));
+      }
+      // Check body collision
+      else if (snake->length > 1) {
+        for (int idx = 1; idx < snake->length; ++idx) {
+          snake_piece *piece = GetSnakePiece(snake, idx);
+          if (piece && piece->x == next_x && piece->y == next_y) {
+            snake->alive = false;
+          }
+        }
+      }
+    }
+    if (snake->alive) {
+      // Move the head
+      MoveSnakePiece(head, head->dir);
 
-    // Move the body pieces
-    for (int piece_idx = 1; piece_idx < snake->length; ++piece_idx) {
-      snake_piece *piece = GetSnakePiece(snake, piece_idx);
-      MoveSnakePiece(piece, piece->dir);
-      // TODO use the index to determine how many direction recordings need to be checked
-      //   instead of looping over all of them every time.
-      // Look at oldest recording first.
-      bool32 last_piece = piece_idx == snake->length - 1;
-      for (int idx = 0; idx < snake->num_dir_recordings; ++idx) {
-        dir_change_record *record = &snake->dir_recordings[idx];
-        if (piece->x == record->x && piece->y == record->y) {
-          piece->dir = record->dir;
+      // Move the body pieces
+      for (int piece_idx = 1; piece_idx < snake->length; ++piece_idx) {
+        snake_piece *piece = GetSnakePiece(snake, piece_idx);
+        MoveSnakePiece(piece, piece->dir);
+        // TODO use the index to determine how many direction recordings need to be checked
+        //   instead of looping over all of them every time.
+        // Look at oldest recording first.
+        bool32 last_piece = piece_idx == snake->length - 1;
+        for (int idx = 0; idx < snake->num_dir_recordings; ++idx) {
+          dir_change_record *record = &snake->dir_recordings[idx];
+          if (piece->x == record->x && piece->y == record->y) {
+            piece->dir = record->dir;
 
-          if (last_piece) {
-            // Delete the recording
-            for (int i = 0; i < snake->num_dir_recordings; ++i) {
-              if (i == snake->num_dir_recordings - 1) {
-                snake->num_dir_recordings--;
-                snake->dir_recordings[i] = {};
-              }
-              else {
-                // Shift
-                snake->dir_recordings[i] = snake->dir_recordings[i + 1];
+            if (last_piece) {
+              // Delete the recording
+              for (int i = 0; i < snake->num_dir_recordings; ++i) {
+                if (i == snake->num_dir_recordings - 1) {
+                  snake->num_dir_recordings--;
+                  snake->dir_recordings[i] = {};
+                }
+                else {
+                  // Shift
+                  snake->dir_recordings[i] = snake->dir_recordings[i + 1];
+                }
               }
             }
           }
         }
       }
-    }
-    // Check for collision with walls
-    if (head->x == 0 || head->x == state->num_tiles_x + 1
-        || head->y == 0 || head->y == state->num_tiles_y + 1) {
-      snake->alive = false;
-      head->x = Max(1, Min(head->x, state->num_tiles_x));
-      head->y = Max(1, Min(head->y, state->num_tiles_y));
-    }
-    // Check body collision
-    else if (snake->length > 1) {
-      for (int idx = 1; idx < snake->length; ++idx) {
-        snake_piece *piece = GetSnakePiece(snake, idx);
-        if (piece && piece->x == head->x && piece->y == head->y) {
-          snake->alive = false;
-        }
-      }
-    }
 
-    snake_piece *tail = &snake->pieces[snake->length - 1];
-    for (int idx = 0; idx < state->num_foods; ++idx) {
-      snake_food *food = &state->foods[idx];
-      if (food && tail->x == food->x && tail->y == food->y) {
-        // TODO refactor this type of scanning/deletion code
-        // TODO BUG: looks weird when you move the moment you eat a food
-        for (int i = idx; i < state->num_foods; ++i) {
-          if (i == state->num_foods - 1) {
-            // Delete food
-            state->num_foods--;
-            state->foods[i] = {};
+      // Eat
+      snake_piece *tail = &snake->pieces[snake->length - 1];
+      for (int idx = 0; idx < state->num_foods; ++idx) {
+        snake_food *food = &state->foods[idx];
+        if (food && tail->x == food->x && tail->y == food->y) {
+          // TODO refactor this type of scanning/deletion code
+          // TODO BUG: looks weird when you move the moment you eat a food
+          for (int i = idx; i < state->num_foods; ++i) {
+            if (i == state->num_foods - 1) {
+              // Delete food
+              state->num_foods--;
+              state->foods[i] = {};
+            }
+            else {
+              // Shift food
+              state->foods[i] = state->foods[i + 1];
+            }
           }
-          else {
-            // Shift food
-            state->foods[i] = state->foods[i + 1];
-          }
+          ExtendSnake(snake);
         }
-        ExtendSnake(snake);
       }
     }
   }
