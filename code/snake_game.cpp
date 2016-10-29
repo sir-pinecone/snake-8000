@@ -126,6 +126,27 @@ void MoveSnakePiece(snake_piece *piece, direction in_direction) {
   }
 }
 
+direction OppositeDirection(direction dir) {
+  switch(dir) {
+    case NORTH: {
+      return SOUTH;
+    } break;
+
+    case SOUTH: {
+      return NORTH;
+    } break;
+
+    case EAST: {
+      return WEST;
+    } break;
+
+    case WEST: {
+      return EAST;
+    } break;
+  }
+  return NONE;
+}
+
 void ExtendSnake(snake_state *snake) {
   Assert((snake->length - 1) >= 0);
   if (snake->length < ArrayCount(snake->pieces)) {
@@ -133,21 +154,8 @@ void ExtendSnake(snake_state *snake) {
     snake_piece new_piece;
     new_piece.x = tail->x;
     new_piece.y = tail->y;
-    // We want to place the piece in the correct spot
-    direction new_piece_dir = NONE;
-    if (tail->dir == NORTH) {
-      new_piece_dir = SOUTH;
-    }
-    else if (tail->dir == SOUTH) {
-      new_piece_dir = NORTH;
-    }
-    else if (tail->dir == WEST) {
-      new_piece_dir = EAST;
-    }
-    else if (tail->dir == EAST) {
-      new_piece_dir = WEST;
-    }
-    MoveSnakePiece(&new_piece, new_piece_dir);
+    // Can make use of this to shift the piece into place
+    MoveSnakePiece(&new_piece, OppositeDirection(tail->dir));
     new_piece.dir = tail->dir;
     snake->pieces[snake->length++] = new_piece;
   }
@@ -157,7 +165,10 @@ void ExtendSnake(snake_state *snake) {
 void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
   if (snake->alive) {
     snake_piece *head = GetSnakeHead(snake);
-    if (head->dir != new_dir && snake->new_direction != new_dir) {
+    direction inverse_head_dir = OppositeDirection(head->dir);
+    if (head->dir != new_dir &&
+        new_dir != inverse_head_dir &&
+        snake->new_direction != new_dir) {
       snake->new_direction = new_dir;
       if (snake->length > 1) {
         // Record the path change
@@ -222,7 +233,6 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
     state->snake_update_timer = 0;
     snake_piece *head = GetSnakeHead(snake);
 
-    // TODO don't allow the head to move backwards into itself
     if (snake->new_direction != NONE) {
       head->dir = snake->new_direction;
       snake->new_direction = NONE;
@@ -312,8 +322,8 @@ void ResetGame(game_state *state) {
   snake.num_dir_recordings = 0;
   snake_piece head = {};
   head.dir = EAST;
-  head.x = 1;
-  head.y = 1;
+  head.x = 30;
+  head.y = 25;
   snake.pieces[0] = head;
   snake.length = 1;
   snake.alive = true;
