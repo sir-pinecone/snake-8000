@@ -6,6 +6,9 @@
 
 #include "snake_game.h"
 
+// IDEA: create a process that plays the game flawlessly. Or introduce randomness in order
+// to test the game.
+
 void GameOutputSound(game_state *state, game_sound_output_buffer *sound_buffer, int32 tone_hz) {
   int16 tone_volume = 1000;
   // Middle c note - 256 cycles (1 complete pattern of the wave, from one trough to the
@@ -207,7 +210,6 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
 }
 
 void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
-  // TODO fix snek bounce - it's bouncing off the direction change tiles
   // TODO decrease step speed as snake length increases
   if (state->snake_update_timer > 0.2f) {
     state->snake_update_timer = 0;
@@ -220,13 +222,16 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
       snake->new_direction = NONE;
     }
 
-    // Move the pieces
-    for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
+    // Move the head
+    MoveSnakePiece(head, head->dir);
+
+    // Move the body pieces
+    for (int piece_idx = 1; piece_idx <= snake->length; ++piece_idx) {
       snake_piece *piece = GetSnakePiece(snake, piece_idx);
       MoveSnakePiece(piece, piece->dir);
-      // TODO use the index to decide how many direction recordings to check.
+      // TODO use the index to determine how many direction recordings need to be checked
+      //   instead of looping over all of them every time.
       // Look at oldest recording first.
-      // For now we do a simple check all loop
       bool32 last_piece = piece_idx == snake->length - 1;
       for (int idx = 0; idx < snake->num_dir_recordings; ++idx) {
         dir_change_record *record = &snake->dir_recordings[idx];
