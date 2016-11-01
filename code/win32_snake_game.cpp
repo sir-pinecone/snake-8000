@@ -1028,6 +1028,8 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
         // @start
         uint64 last_cycle_count = __rdtsc();
         while (global_running) {
+          new_input->dt_for_frame = target_seconds_per_frame;
+
           FILETIME new_dll_compile_time = Win32GetLastFileWriteTime(source_game_code_dll_full_path);
           if (CompareFileTime(&new_dll_compile_time, &game.dll_last_compile_time) != 0) {
             Win32UnloadGameCode(&game);

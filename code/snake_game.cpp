@@ -247,14 +247,16 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
 }
 
 real32 StepSpeed(snake_state *snake) {
-   return snake->length * 0.01f;
+   return snake->length * 0.005f;
 }
 
-void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
-  // TODO use real time step with passed in delta
+void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
+  // Update is not frame rate independent at all
   snake_state *snake = &state->snake;
-  if (state->snake_update_timer > 0.12f) {
-    state->snake_update_timer = 0;
+  state->snake_update_timer -= dt;
+  if (state->snake_update_timer < 0.0f) {
+    state->snake_update_timer = 0.25f - StepSpeed(snake);
+
     snake_piece *head = GetSnakeHead(snake);
 
     if (snake->new_direction != NONE) {
@@ -340,10 +342,6 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state) {
         }
       }
     }
-  }
-  else {
-    real32 step_speed = StepSpeed(snake);
-    state->snake_update_timer += step_speed;
   }
 }
 
@@ -486,7 +484,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     RenderGrid(screen_buffer, state);
     snake_state *snake = &state->snake;
     if (snake->alive) {
-      UpdateSnake(screen_buffer, state);
+      UpdateSnake(screen_buffer, state, input->dt_for_frame);
     }
     RenderSnake(screen_buffer, state);
     RenderFood(screen_buffer, state);

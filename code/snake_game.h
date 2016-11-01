@@ -210,6 +210,7 @@ struct game_controller_input {
 struct game_input {
   game_button_state mouse_buttons[5];
   int32 mouse_x, mouse_y, mouse_z;
+  real32 dt_for_frame;
 
   // TODO insert clock values here
   game_controller_input controllers[5];
