@@ -413,10 +413,11 @@ void ProcessInput(game_input *input, game_state *state) {
         ChangeSnakeDirection(snake, SOUTH);
       }
 
-      if (controller->right_shoulder.ended_down && snake->length < ArrayCount(snake->pieces)) {
+      if (controller->right_shoulder.ended_down && snake->alive &&
+          snake->length < ArrayCount(snake->pieces)) {
         ExtendSnake(snake);
       }
-      else if (controller->left_shoulder.ended_down && snake->length > 1) {
+      else if (controller->left_shoulder.ended_down && snake->alive && snake->length > 1) {
         snake->length--;
       }
     }

@@ -272,7 +272,7 @@ struct snake_state {
   direction new_direction;
   dir_change_record dir_recordings[2000];
   int num_dir_recordings;
-  snake_piece pieces[20];
+  snake_piece pieces[200];
 };
 
 struct snake_food {
