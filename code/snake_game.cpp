@@ -350,15 +350,16 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
 
 void ResetGame(thread_context *thread, game_memory *memory, game_state *state) {
   // TODO implement no walls mode
-  // TODO pick random starting pos
-  state->reset_game = false;
+  state->do_game_reset = false;
   snake_state snake = {};
   snake.new_direction = NONE;
   snake.num_dir_recordings = 0;
   snake_piece head = {};
-  head.dir = EAST;
-  head.x = 30;
-  head.y = 25;
+
+  head.dir = (direction)(pcg32_boundedrand_r(&rng, 4) + 1);
+  head.x = (int)(state->num_tiles_x / 2);
+  head.y = (int)(state->num_tiles_y / 2);
+
   snake.pieces[0] = head;
   snake.length = 1;
   snake.alive = true;
@@ -428,7 +429,7 @@ void ProcessInput(game_input *input, game_state *state) {
     if (controller->action_down.ended_down) {
       state->red_offset += 1;
       if (snake->alive == false) {
-        state->reset_game = true;
+        state->do_game_reset = true;
       }
       else {
         // TODO kill the window
@@ -476,7 +477,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 
   ProcessInput(input, state);
 
-  if (state->reset_game) {
+  if (state->do_game_reset) {
     ResetGame(thread, memory, state);
   }
   else {
