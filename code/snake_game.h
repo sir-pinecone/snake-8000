@@ -136,9 +136,6 @@ typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 #define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(thread_context *thread, void *memory)
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
 
-#define DEBUG_PLATFORM_RANDOM_NUMBER(name) real32 name(thread_context *thread, real32 seed,  real32 min, real32 max)
-typedef DEBUG_PLATFORM_RANDOM_NUMBER(debug_platform_random_number);
-
 #endif
 
 // ---------------------------------------------------------------------------------------
@@ -225,6 +222,9 @@ inline game_controller_input *GetController(game_input *input, int controller_id
 struct game_memory {
   bool32 is_initialized;
 
+  uint64 rand_seed;
+  uint64 rand_rounds;
+
   uint64 permanent_storage_size;
   void *permanent_storage; /* NOTE: REQUIRED to be cleared to zero at startup */
 
@@ -235,7 +235,6 @@ struct game_memory {
   debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
   debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
   debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
-  debug_platform_random_number *DEBUGPlatformRandomNumber;
 };
 
 // TODO: needs four things: controller/keyboard input, bitmap buffer to use, sound buffer and timing
@@ -281,8 +280,7 @@ struct snake_food {
 };
 
 /* NOTE: might relocate this later since the platform layer doesn't need to know about it at all */
-struct game_state {
-  real32 rand_seed;
+ struct game_state {
   snake_state snake;
   snake_food foods[10];
   int num_foods;

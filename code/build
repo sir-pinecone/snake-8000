@@ -6,7 +6,7 @@ debug=1
 # Compiler Flags
 # --------------
 warning_level="-W4"
-compiler_warnings="$warning_level -wd4201 -wd4100 -wd4189 -wd4505 -wd4456"
+compiler_warnings="$warning_level -wd4201 -wd4100 -wd4189 -wd4505 -wd4456 -wd4146"
 compiler_env="-DSNAKE_INTERNAL=1 -DSNAKE_SLOW=1 -DSNAKE_WIN32=1"
 
 [[ $debug -eq 1 ]] && conditional_flags="-MTd" || conditional_flags="-MT"

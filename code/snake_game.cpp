@@ -4,7 +4,9 @@
  * Make sure to not include anything static in the DLL. Put state in the game memory.
  */
 
+#include "pcg_basic.h"
 #include "snake_game.h"
+
 
 // IDEA: create a process that plays the game flawlessly. Or introduce randomness in order
 // to test the game.
@@ -451,13 +453,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   if (!memory->is_initialized) {
     char *filename = __FILE__;
 
-    debug_read_file_result file = memory->DEBUGPlatformReadEntireFile(thread, filename);
-    if (file.content) {
-      memory->DEBUGPlatformWriteEntireFile(thread, "test.out", file.content_size, file.content);
-      memory->DEBUGPlatformFreeFileMemory(thread, file.content);
-    }
-
-    state->rand_seed = memory->DEBUGPlatformRandomNumber(thread, 0, 2, 8);
     state->tone_hz = 220;
     state->t_sine = 0.0f;
     state->red_offset = 1;
@@ -474,6 +469,10 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     // TODO this may be more appropriate to do in the platform layer
     memory->is_initialized = true;
   }
+
+  int r = pcg32_boundedrand(10);
+  int r2 = pcg32_boundedrand(100);
+  int r3 = pcg32_random();
 
   ProcessInput(input, state);
 

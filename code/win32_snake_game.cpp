@@ -27,8 +27,10 @@
 #include <stdio.h>
 #include <xinput.h>
 #include <dsound.h>
+#include "pcg_basic.h"
 
 #include "win32_snake_game.h"
+
 
 // ---------------------------------------------------------------------------------------
 // Game Globals
@@ -78,15 +80,6 @@ Win32GetSecondsElapsed(LARGE_INTEGER start, LARGE_INTEGER end) {
   real32 result = ((real32)(end.QuadPart - start.QuadPart) /
                    (real32)global_perf_count_freq);
   return result;
-}
-
-// ---------------------------------------------------------------------------------------
-// Random Number Generators
-// ---------------------------------------------------------------------------------------
-
-DEBUG_PLATFORM_RANDOM_NUMBER(DEBUGPlatformRandomNumber) {
-  LARGE_INTEGER c = Win32GetWallClock();
-  return max - min;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -857,6 +850,17 @@ Win32DebugDrawAudio(win32_offscreen_buffer *backbuffer, int32 marker_count,
 // Use F11 in Visual Studio to debug
 int32 CALLBACK
 WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 show_code) {
+  // Seed the random number generator
+  int rounds = 1;
+  LARGE_INTEGER rand_t = Win32GetWallClock();
+  uint64 rand_seed = rand_t.QuadPart ^ (intptr_t)&printf;
+  uint64 rand_rounds = (intptr_t)&rounds;
+  pcg32_srandom(rand_seed, rand_rounds);
+  char text_buffer[256];
+  _snprintf_s(text_buffer, sizeof(text_buffer), "Rand seed: %I64u, Rand rounds: %I64u\n",
+             (int64)rand_seed, (int64)rand_rounds);
+  OutputDebugStringA(text_buffer);
+
   LARGE_INTEGER perf_count_freq_result;
   QueryPerformanceFrequency(&perf_count_freq_result);
   global_perf_count_freq = perf_count_freq_result.QuadPart;
@@ -951,10 +955,12 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
       // TODO create different memory profiles based on the type of computer running this
       game_memory game_store = {};
 
+      game_store.rand_seed = rand_seed;
+      game_store.rand_rounds = rand_rounds;
+
       game_store.DEBUGPlatformReadEntireFile = DEBUGPlatformReadEntireFile;
       game_store.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
       game_store.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
-      game_store.DEBUGPlatformRandomNumber = DEBUGPlatformRandomNumber;
 
       game_store.permanent_storage_size = Megabytes(64);
       game_store.temp_storage_size = Megabytes(500); // NOTE: Reduced from 1 GB strictly for live loop editing performance
