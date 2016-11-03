@@ -41,7 +41,7 @@ global_variable bool32 global_pause;
 global_variable win32_offscreen_buffer global_backbuffer;
 global_variable LPDIRECTSOUNDBUFFER global_secondary_audio_buffer;
 global_variable int64 global_perf_count_freq;
-
+global_variable pcg32_random_t rng;
 
 // ---------------------------------------------------------------------------------------
 // Utils
@@ -855,7 +855,8 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
   LARGE_INTEGER rand_t = Win32GetWallClock();
   uint64 rand_seed = rand_t.QuadPart ^ (intptr_t)&printf;
   uint64 rand_rounds = (intptr_t)&rounds;
-  pcg32_srandom(rand_seed, rand_rounds);
+  pcg32_srandom_r(&rng, rand_seed, rand_rounds);
+
   char text_buffer[256];
   _snprintf_s(text_buffer, sizeof(text_buffer), "Rand seed: %I64u, Rand rounds: %I64u\n",
              (int64)rand_seed, (int64)rand_rounds);

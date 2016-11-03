@@ -21,13 +21,6 @@
  *     http://www.pcg-random.org
  */
 
-/*
- * This code is derived from the full C implementation, which is in turn
- * derived from the canonical C++ PCG implementation. The C++ version
- * has many additional features and is preferable if you can use C++ in
- * your project.
- */
-
 #if !defined(PCG_BASIC_H)
 
 #include <inttypes.h>
@@ -36,19 +29,15 @@
 extern "C" {
 #endif
 
+// NOTE: I removed the global rng API. The rng was static, which doesn't work for this
+// single file library.
+
 struct pcg_state_setseq_64 {    // Internals are *Private*.
     uint64_t state;             // RNG state.  All values are possible.
     uint64_t inc;               // Controls which RNG sequence (stream) is
                                 // selected. Must *always* be odd.
 };
 typedef struct pcg_state_setseq_64 pcg32_random_t;
-
-// If you *must* statically initialize it, here's one.
-
-#define PCG32_INITIALIZER   { 0x853c49e6748fea9bULL, 0xda3e39cb94b95bdbULL }
-
-// State for global RNGs
-static pcg32_random_t pcg32_global = PCG32_INITIALIZER;
 
 // ---------------------------------------------------------------------------------------
 // Public API
@@ -64,12 +53,7 @@ uint32_t pcg32_random_r(pcg32_random_t* rng)
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
 }
 
-uint32_t pcg32_random()
-{
-    return pcg32_random_r(&pcg32_global);
-}
-
-// Seed the rng.  Specified in two parts, state initializer and a
+// Seed the rng. Specified in two parts, state initializer and a
 // sequence selection constant (a.k.a. stream id)
 void pcg32_srandom_r(pcg32_random_t* rng, uint64_t initstate, uint64_t initseq) {
     rng->state = 0U;
@@ -77,10 +61,6 @@ void pcg32_srandom_r(pcg32_random_t* rng, uint64_t initstate, uint64_t initseq) 
     pcg32_random_r(rng);
     rng->state += initstate;
     pcg32_random_r(rng);
-}
-
-void pcg32_srandom(uint64_t seed, uint64_t seq) {
-    pcg32_srandom_r(&pcg32_global, seed, seq);
 }
 
 // Generate a uniformly distributed number, r, where 0 <= r < bound
@@ -114,10 +94,6 @@ uint32_t pcg32_boundedrand_r(pcg32_random_t* rng, uint32_t bound)
         if (r >= threshold)
             return r % bound;
     }
-}
-
-uint32_t pcg32_boundedrand(uint32_t bound) {
-    return pcg32_boundedrand_r(&pcg32_global, bound);
 }
 
 #if __cplusplus
