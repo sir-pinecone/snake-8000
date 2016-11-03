@@ -221,7 +221,7 @@ void RenderRecordingSpot(game_offscreen_buffer *buffer, game_state *state) {
 }
 
 void RenderFood(game_offscreen_buffer *buffer, game_state *state) {
-  uint32 color = RGBColor(0, 255, 0);
+  uint32 color = RGBColor(250, 255, 0);
   snake_food *food = &state->foods[0];
   for (int idx = 0; idx < state->num_foods; ++idx) {
     snake_food *food = &state->foods[idx];
@@ -249,6 +249,17 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
   }
 }
 
+void CreateFood(game_state *state) {
+  snake_food food = {};
+  // TODO check for collision with player
+  if (state->num_foods < ArrayCount(state->foods)) {
+    // TODO check if food tile is already occupied
+    food.x = (int)(pcg32_boundedrand_r(&rng, state->num_tiles_x - 1) + 1);
+    food.y = (int)(pcg32_boundedrand_r(&rng, state->num_tiles_y - 1) + 1);
+    state->foods[state->num_foods++] = food;
+  }
+}
+
 real32 StepSpeed(snake_state *snake) {
    return snake->length * 0.005f;
 }
@@ -258,6 +269,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
   snake_state *snake = &state->snake;
   state->snake_update_timer -= dt;
   if (state->snake_update_timer < 0.0f) {
+    // TODO speed slowly grows and then suddenly it's really really fast. Fix
     state->snake_update_timer = 0.25f - StepSpeed(snake);
 
     snake_piece *head = GetSnakeHead(snake);
@@ -289,6 +301,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
         }
       }
     }
+
     if (snake->alive) {
       // Move the head
       MoveSnakePiece(head, head->dir);
@@ -342,6 +355,9 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
             }
           }
           ExtendSnake(snake);
+          CreateFood(state);
+          CreateFood(state);
+          CreateFood(state);
         }
       }
     }
@@ -367,20 +383,11 @@ void ResetGame(thread_context *thread, game_memory *memory, game_state *state) {
   state->snake = snake;
   state->snake_update_timer = 0.0f;
 
-  snake_food food = {};
-  food.x = 25;
-  food.y = 25;
-  snake_food food2 = {};
-  food2.x = 45;
-  food2.y = 8;
-  snake_food food3 = {};
-  food3.x = 15;
-  food3.y = 5;
-
-  state->foods[0] = food;
-  state->foods[1] = food2;
-  state->foods[2] = food3;
-  state->num_foods = 3;
+  CreateFood(state);
+  CreateFood(state);
+  CreateFood(state);
+  CreateFood(state);
+  CreateFood(state);
 }
 
 void ProcessInput(game_input *input, game_state *state) {

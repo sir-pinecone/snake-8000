@@ -1204,6 +1204,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
               }
               else {
                 /* NOTE: the controller is not available */
+
                 new_controller->is_connected = false;
               }
             }
