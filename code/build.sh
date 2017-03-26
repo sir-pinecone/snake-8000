@@ -30,15 +30,15 @@ snake_linker="$common_linker -PDB:snake_$RANDOM.pdb -DLL -EXPORT:GameGetSoundSam
 
 # Build
 #------
-win32_source_file="../../snake/code/win32_snake_game.cpp"
-snake_source_file="../../snake/code/snake_game.cpp"
+win32_source_file="../../code/win32_snake_game.cpp"
+snake_source_file="../../code/snake_game.cpp"
 
 #-----------------------------------------------------------------------------------------
 # Compile!
 
-mkdir ../../builds/snake -p
-pushd ../../builds/snake
-rm ../../builds/snake/*.pdb &>/dev/null
+mkdir "../build/win$version" -p
+pushd "../build/win$version/"
+rm "../build/win$version/*.pdb" &>/dev/null
 
 cl $common_compiler_flags $snake_source_file -Fmsnake_game.map -LD -link $snake_linker
 cl $common_compiler_flags $win32_source_file -Fmwin32_snake.map -link $platform_linker
