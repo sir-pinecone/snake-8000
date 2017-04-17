@@ -12,7 +12,7 @@ global_variable pcg32_random_t rng;
 // IDEA: create a process that plays the game flawlessly. Or introduce randomness in order
 // to test the game.
 
-void GameOutputSound(game_state *state, game_sound_output_buffer *sound_buffer, int32 tone_hz) {
+void GameOutputSound(GameState *state, GameSoundOutputBuffer *sound_buffer, int32 tone_hz) {
   int16 tone_volume = 1000;
   // Middle c note - 256 cycles (1 complete pattern of the wave, from one trough to the
   // next) / per second
@@ -38,7 +38,7 @@ void GameOutputSound(game_state *state, game_sound_output_buffer *sound_buffer, 
   }
 }
 
-void RenderWeirdGradient(game_offscreen_buffer* buffer,
+void RenderWeirdGradient(GameOffscreenBuffer* buffer,
                          int32 blue_offset, int32 green_offset, int32 red_offset) {
   // Points to a single byte memory address, starting with the head of the buffer
   // We use bytes because the pointer moves down a row by shifting by the pitch, which
@@ -75,7 +75,7 @@ int GetTilePixel(int tile_n, int num_tiles, int tile_size) {
 }
 
 void
-DrawBlock(game_offscreen_buffer* buffer, uint32 color,
+DrawBlock(GameOffscreenBuffer* buffer, uint32 color,
           int x_start, int y_start, int block_size) {
   uint8 *end_of_buffer = (uint8 *)buffer->memory + (buffer->height * buffer->pitch);
   for (int x = x_start; x < x_start + block_size; ++x) {
@@ -90,7 +90,7 @@ DrawBlock(game_offscreen_buffer* buffer, uint32 color,
   }
 }
 
-void RenderGrid(game_offscreen_buffer* buffer, game_state *state) {
+void RenderGrid(GameOffscreenBuffer* buffer, GameState *state) {
   for (int y = 1; y <= state->num_tiles_y; ++y) {
     int y_pixel = GetTilePixel(y, state->num_tiles_y, state->tile_size);
     for (int x = 1; x <= state->num_tiles_x; ++x) {
@@ -100,17 +100,17 @@ void RenderGrid(game_offscreen_buffer* buffer, game_state *state) {
   }
 }
 
-snake_piece * GetSnakePiece(snake_state *snake, int index) {
+SnakePiece * GetSnakePiece(SnakeState *snake, int index) {
   Assert(index < ArrayCount(snake->pieces));
   return &snake->pieces[index];
 }
 
-snake_piece * GetSnakeHead(snake_state *snake) {
+SnakePiece * GetSnakeHead(SnakeState *snake) {
   return GetSnakePiece(snake, 0);
 }
 
-int SnakePieceNextX(snake_piece *piece) {
-  direction dir = piece->dir;
+int SnakePieceNextX(SnakePiece *piece) {
+  Direction dir = piece->dir;
   if (dir == EAST) {
     return piece->x + 1;
   }
@@ -120,8 +120,8 @@ int SnakePieceNextX(snake_piece *piece) {
   return piece->x;
 }
 
-int SnakePieceNextY(snake_piece *piece) {
-  direction dir = piece->dir;
+int SnakePieceNextY(SnakePiece *piece) {
+  Direction dir = piece->dir;
   if (dir == SOUTH) {
     return piece->y + 1;
   }
@@ -131,7 +131,7 @@ int SnakePieceNextY(snake_piece *piece) {
   return piece->y;
 }
 
-void MoveSnakePiece(snake_piece *piece, direction in_direction) {
+void MoveSnakePiece(SnakePiece *piece, Direction in_direction) {
   switch(in_direction) {
     case NORTH: {
       piece->y--;
@@ -151,7 +151,7 @@ void MoveSnakePiece(snake_piece *piece, direction in_direction) {
   }
 }
 
-direction OppositeDirection(direction dir) {
+Direction OppositeDirection(Direction dir) {
   switch(dir) {
     case NORTH: {
       return SOUTH;
@@ -172,11 +172,11 @@ direction OppositeDirection(direction dir) {
   return NONE;
 }
 
-void ExtendSnake(snake_state *snake) {
+void ExtendSnake(SnakeState *snake) {
   Assert((snake->length - 1) >= 0);
   if (snake->length < ArrayCount(snake->pieces)) {
-    snake_piece *tail = GetSnakePiece(snake, snake->length - 1);
-    snake_piece new_piece;
+    SnakePiece *tail = GetSnakePiece(snake, snake->length - 1);
+    SnakePiece new_piece;
     new_piece.x = tail->x;
     new_piece.y = tail->y;
     // Can make use of this to shift the piece into place
@@ -187,10 +187,10 @@ void ExtendSnake(snake_state *snake) {
   // TODO ELSE YOU WIN!
 }
 
-void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
+void ChangeSnakeDirection(SnakeState *snake, Direction new_dir) {
   if (snake->alive) {
-    snake_piece *head = GetSnakeHead(snake);
-    direction inverse_head_dir = OppositeDirection(head->dir);
+    SnakePiece *head = GetSnakeHead(snake);
+    Direction inverse_head_dir = OppositeDirection(head->dir);
     if (head->dir != new_dir &&
         (new_dir != inverse_head_dir || snake->length == 1) &&
         snake->new_direction != new_dir) {
@@ -198,7 +198,7 @@ void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
       if (snake->length > 1) {
         // Record the path change
         Assert(snake->num_dir_recordings < ArrayCount(snake->dir_recordings));
-        dir_change_record record = {};
+        DirChangeRecord record = {};
         record.dir = new_dir;
         record.x = head->x;
         record.y = head->y;
@@ -209,18 +209,18 @@ void ChangeSnakeDirection(snake_state *snake, direction new_dir) {
 }
 
 // TODO LYNDA create an x and y version of GetTilePixel()
-void RenderRecordingSpot(game_offscreen_buffer *buffer, game_state *state) {
+void RenderRecordingSpot(GameOffscreenBuffer *buffer, GameState *state) {
   uint32 color = RGBColor(0, 255, 255);
-  snake_state *snake = &state->snake;
+  SnakeState *snake = &state->snake;
   for (int idx = 0; idx < snake->num_dir_recordings; ++idx) {
-    dir_change_record *record = &snake->dir_recordings[idx];
+    DirChangeRecord *record = &snake->dir_recordings[idx];
     int x_pixel = GetTilePixel(record->x, state->num_tiles_x, state->tile_size);
     int y_pixel = GetTilePixel(record->y, state->num_tiles_y, state->tile_size);
     DrawBlock(buffer, color, x_pixel, y_pixel, state->tile_size);
   }
 }
 
-void RenderFood(game_offscreen_buffer *buffer, game_state *state) {
+void RenderFood(GameOffscreenBuffer *buffer, GameState *state) {
   uint32 color = RGBColor(100, 230, 140);
   SnakeFood *food = &state->foods[0];
   for (int idx = 0; idx < state->num_foods; ++idx) {
@@ -233,13 +233,13 @@ void RenderFood(game_offscreen_buffer *buffer, game_state *state) {
   }
 }
 
-void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
-  snake_state *snake = &state->snake;
-  snake_piece *head = GetSnakeHead(snake);
+void RenderSnake(GameOffscreenBuffer *buffer, GameState *state) {
+  SnakeState *snake = &state->snake;
+  SnakePiece *head = GetSnakeHead(snake);
   uint32 color = snake->alive ? RGBColor(20, 90, 255) : RGBColor(255, 0, 0);
   uint32 head_color = RGBColor(10, 90, 203);
   for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
-    snake_piece *piece = GetSnakePiece(snake, piece_idx);
+    SnakePiece *piece = GetSnakePiece(snake, piece_idx);
     if (piece) {
       int x_pixel = GetTilePixel(piece->x, state->num_tiles_x, state->tile_size);
       int y_pixel = GetTilePixel(piece->y, state->num_tiles_y, state->tile_size);
@@ -249,7 +249,7 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
   }
 }
 
-void CreateFood(game_state *state) {
+void CreateFood(GameState *state) {
   SnakeFood food = {};
   food.eaten = false;
   // TODO check for collision with player
@@ -261,19 +261,19 @@ void CreateFood(game_state *state) {
   }
 }
 
-real32 StepSpeed(snake_state *snake) {
+real32 StepSpeed(SnakeState *snake) {
    return snake->length * 0.005f;
 }
 
-void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
+void UpdateSnake(GameOffscreenBuffer *buffer, GameState *state, real32 dt) {
   // Update is not frame rate independent at all
-  snake_state *snake = &state->snake;
+  SnakeState *snake = &state->snake;
   state->snake_update_timer -= dt;
   if (state->snake_update_timer < 0.0f) {
     // TODO speed slowly grows and then suddenly it's really really fast. Fix
     state->snake_update_timer = 0.25f - StepSpeed(snake);
 
-    snake_piece *head = GetSnakeHead(snake);
+    SnakePiece *head = GetSnakeHead(snake);
 
     if (snake->new_direction != NONE) {
       head->dir = snake->new_direction;
@@ -295,7 +295,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
       // Check body collision
       else if (snake->length > 1) {
         for (int idx = 1; idx < snake->length; ++idx) {
-          snake_piece *piece = GetSnakePiece(snake, idx);
+          SnakePiece *piece = GetSnakePiece(snake, idx);
           if (piece && piece->x == next_x && piece->y == next_y) {
             snake->alive = false;
           }
@@ -314,14 +314,14 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
 
       // Move the body pieces
       for (int piece_idx = 1; piece_idx < snake->length; ++piece_idx) {
-        snake_piece *piece = GetSnakePiece(snake, piece_idx);
+        SnakePiece *piece = GetSnakePiece(snake, piece_idx);
         MoveSnakePiece(piece, piece->dir);
         // TODO use the index to determine how many direction recordings need to be checked
         //   instead of looping over all of them every time.
         // Look at oldest recording first.
         bool32 last_piece = (piece_idx == snake->length - 1);
         for (int idx = 0; idx < snake->num_dir_recordings; ++idx) {
-          dir_change_record *record = &snake->dir_recordings[idx];
+          DirChangeRecord *record = &snake->dir_recordings[idx];
           if (piece->x == record->x && piece->y == record->y) {
             piece->dir = record->dir;
 
@@ -343,7 +343,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
       }
 
       // Eat
-      snake_piece *tail = &snake->pieces[snake->length - 1];
+      SnakePiece *tail = &snake->pieces[snake->length - 1];
       for (int idx = 0; idx < state->num_foods; ++idx) {
         SnakeFood *food = &state->foods[idx];
         // TODO BUG: looks weird when you move the moment you eat a food
@@ -373,15 +373,15 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
   }
 }
 
-void ResetGame(thread_context *thread, game_memory *memory, game_state *state) {
+void ResetGame(ThreadContext *thread, GameMemory *memory, GameState *state) {
   // TODO implement no walls mode
   state->do_game_reset = false;
-  snake_state snake = {};
+  SnakeState snake = {};
   snake.new_direction = NONE;
   snake.num_dir_recordings = 0;
-  snake_piece head = {};
+  SnakePiece head = {};
 
-  head.dir = (direction)(pcg32_boundedrand_r(&rng, 4) + 1);
+  head.dir = (Direction)(pcg32_boundedrand_r(&rng, 4) + 1);
   head.x = (int)(state->num_tiles_x / 2);
   head.y = (int)(state->num_tiles_y / 2);
 
@@ -399,12 +399,12 @@ void ResetGame(thread_context *thread, game_memory *memory, game_state *state) {
   CreateFood(state);
 }
 
-void ProcessInput(game_input *input, game_state *state) {
+void ProcessInput(GameInput *input, GameState *state) {
   for (int controller_idx = 0;
       controller_idx < ArrayCount(input->controllers);
       ++controller_idx) {
-    game_controller_input *controller = GetController(input, controller_idx);
-    snake_state *snake = &state->snake;
+    GameControllerInput *controller = GetController(input, controller_idx);
+    SnakeState *snake = &state->snake;
 
     if (controller->is_analog) {
       /* NOTE:  Use analog movement tuning */
@@ -464,9 +464,9 @@ void ProcessInput(game_input *input, game_state *state) {
 extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   Assert((&input->controllers[0].terminator - &input->controllers[0].buttons[0]) ==
          ArrayCount(input->controllers[0].buttons));
-  Assert(sizeof(game_state) <= memory->permanent_storage_size);
+  Assert(sizeof(GameState) <= memory->permanent_storage_size);
 
-  game_state *state = (game_state *)memory->permanent_storage;
+  GameState *state = (GameState *)memory->permanent_storage;
 
   if (!memory->is_initialized) {
     char *filename = __FILE__;
@@ -499,7 +499,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   else {
     // RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
     RenderGrid(screen_buffer, state);
-    snake_state *snake = &state->snake;
+    SnakeState *snake = &state->snake;
     if (snake->alive) {
       UpdateSnake(screen_buffer, state, input->dt_for_frame);
     }
@@ -514,6 +514,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 // extern "C" tells the compiler to use the old C naming process which will preserve the
 // function name. This is needed in order for us to call the function from a DLL.
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples) {
-  game_state *state = (game_state *)memory->permanent_storage;
+  GameState *state = (GameState *)memory->permanent_storage;
   GameOutputSound(state, sound_buffer, state->tone_hz);
 }

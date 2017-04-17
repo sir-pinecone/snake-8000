@@ -101,7 +101,7 @@ ConcatStr(char *source_a, size_t source_a_count,
 
 // Will help provide info on the thread we're running in when in a multi-threaded env.
 // Not all platforms do a good job supplying this info so we'll manage it ourselves.
-struct thread_context {
+struct ThreadContext {
   int placeholder;
 };
 
@@ -118,7 +118,7 @@ struct thread_context {
  * These are not for doing anything in the shipping game - they are blocking and the write
  * doesn't protect against lost data!!!
  */
-struct debug_read_file_result {
+struct DebugReadFileResult {
   uint32 content_size;
   void *content;
 };
@@ -127,13 +127,13 @@ struct debug_read_file_result {
 // so that they can be used inside the platform layer. We expect that platform layer to
 // provide pointers to the implementation of these functions (via game memory struct).
 
-#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name(thread_context *thread, char *filename)
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) DebugReadFileResult name(ThreadContext *thread, char *filename)
 typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
 
-#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(thread_context *thread, char *filename, uint32 memory_size, void *memory)
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool32 name(ThreadContext *thread, char *filename, uint32 memory_size, void *memory)
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 
-#define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(thread_context *thread, void *memory)
+#define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(ThreadContext *thread, void *memory)
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
 
 #endif
@@ -143,7 +143,7 @@ typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
 // (this may expand in the future - sound on separate thread, etc.)
 // ---------------------------------------------------------------------------------------
 
-struct game_offscreen_buffer {
+struct GameOffscreenBuffer {
   /* NOTE: Pixels are always 32-bit wide, Little Endian 0x XX RR GG BB
    * memory order BB GG RR XX
    */
@@ -154,18 +154,18 @@ struct game_offscreen_buffer {
   int bytes_per_pixel;
 };
 
-struct game_sound_output_buffer {
+struct GameSoundOutputBuffer {
   int32 samples_per_second;
   int32 sample_count;
   int16 *samples;
 };
 
-struct game_button_state {
+struct GameButtonState {
   int32 half_transition_count;
   bool32 ended_down;
 };
 
-struct game_controller_input {
+struct GameControllerInput {
   bool32 is_connected;
   bool32 is_analog;
   bool32 is_y_inverted;
@@ -177,49 +177,49 @@ struct game_controller_input {
   // Use a union so that buttons[] uses the same memory as the struct. We can then do
   // either buttons[0] or move_up, buttons[1] or move_down, etc.
   union {
-    game_button_state buttons[12];
+    GameButtonState buttons[12];
     struct {
-      game_button_state move_up;
-      game_button_state move_down;
-      game_button_state move_left;
-      game_button_state move_right;
+      GameButtonState move_up;
+      GameButtonState move_down;
+      GameButtonState move_left;
+      GameButtonState move_right;
 
-      game_button_state action_up;
-      game_button_state action_down;
-      game_button_state action_left;
-      game_button_state action_right;
+      GameButtonState action_up;
+      GameButtonState action_down;
+      GameButtonState action_left;
+      GameButtonState action_right;
 
-      game_button_state left_shoulder;
-      game_button_state right_shoulder;
+      GameButtonState left_shoulder;
+      GameButtonState right_shoulder;
 
-      game_button_state start;
-      game_button_state back;
+      GameButtonState start;
+      GameButtonState back;
 
       /* NOTE: All buttons must be added above this line. */
 
       // TODO: Might want to just name this struct in order to compare its size against the
       // size of the buttons array. As it stands, this terminator approach is janky.
-      game_button_state terminator;
+      GameButtonState terminator;
     };
   };
 };
 
-struct game_input {
-  game_button_state mouse_buttons[5];
+struct GameInput {
+  GameButtonState mouse_buttons[5];
   int32 mouse_x, mouse_y, mouse_z;
   real32 dt_for_frame;
 
   // TODO insert clock values here
-  game_controller_input controllers[5];
+  GameControllerInput controllers[5];
 };
 
-inline game_controller_input *GetController(game_input *input, int controller_idx) {
+inline GameControllerInput *GetController(GameInput *input, int controller_idx) {
   Assert(controller_idx < ArrayCount(input->controllers));
-  game_controller_input *result = &input->controllers[controller_idx];
+  GameControllerInput *result = &input->controllers[controller_idx];
   return result;
 }
 
-struct game_memory {
+struct GameMemory {
   bool32 is_initialized;
 
   uint64 rand_seed;
@@ -238,39 +238,40 @@ struct game_memory {
 };
 
 // TODO: needs four things: controller/keyboard input, bitmap buffer to use, sound buffer and timing
-#define GAME_UPDATE_AND_RENDER(name) void name(thread_context *thread, game_memory *memory, game_input *input, game_offscreen_buffer *screen_buffer)
+#define GAME_UPDATE_AND_RENDER(name) void name(ThreadContext *thread, GameMemory *memory, GameInput *input, GameOffscreenBuffer *screen_buffer)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 
 // NOTE: at the moment, this has to be a very fast function. Should return in < ~1ms.
 // TODO: reduce the pressure on this function's performance by measuring it or asking about it
-#define GAME_GET_SOUND_SAMPLES(name) void name(thread_context *thread, game_memory *memory, game_sound_output_buffer *sound_buffer)
+#define GAME_GET_SOUND_SAMPLES(name) void name(ThreadContext *thread, GameMemory *memory, GameSoundOutputBuffer *sound_buffer)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 //
 //
 //
 //
 
-enum direction {NONE, NORTH, EAST, SOUTH, WEST};
+enum Direction {NONE, NORTH, EAST, SOUTH, WEST};
 
-struct snake_piece {
-  direction dir;
+struct SnakePiece {
+  Direction dir;
+  Direction prev_dir;
   int x;
   int y;
 };
 
-struct dir_change_record {
-  direction dir;
+struct DirChangeRecord {
+  Direction dir;
   int x;
   int y;
 };
 
-struct snake_state {
+struct SnakeState {
   int length;
   bool32 alive;
-  direction new_direction;
-  dir_change_record dir_recordings[2000];
+  Direction new_direction;
+  DirChangeRecord dir_recordings[2000];
   int num_dir_recordings;
-  snake_piece pieces[200];
+  SnakePiece pieces[200];
 };
 
 struct SnakeFood {
@@ -280,8 +281,8 @@ struct SnakeFood {
 };
 
 /* NOTE: might relocate this later since the platform layer doesn't need to know about it at all */
- struct game_state {
-  snake_state snake;
+ struct GameState {
+  SnakeState snake;
   SnakeFood foods[10];
   int num_foods;
   bool32 do_game_reset;

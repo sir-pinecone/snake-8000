@@ -40,7 +40,7 @@
 // TODO: global for now
 global_variable bool32 global_running;
 global_variable bool32 global_pause;
-global_variable win32_offscreen_buffer global_backbuffer;
+global_variable Win32OffscreenBuffer global_backbuffer;
 global_variable LPDIRECTSOUNDBUFFER global_secondary_audio_buffer;
 global_variable int64 global_perf_count_freq;
 global_variable pcg32_random_t rng;
@@ -50,7 +50,7 @@ global_variable pcg32_random_t rng;
 // ---------------------------------------------------------------------------------------
 
 internal
-void Win32GetEXEFilename(win32_platform_state *state) {
+void Win32GetEXEFilename(Win32PlatformState *state) {
   // NOTE: Never use WIN32_STATE_FILE_NAME_COUNT in code that is user-facing because it's not very accurate
   // and lead to bad results.
   DWORD size_of_current_filename = GetModuleFileNameA(0, state->exe_filename, sizeof(state->exe_filename));
@@ -63,7 +63,7 @@ void Win32GetEXEFilename(win32_platform_state *state) {
 }
 
 internal
-void Win32RelativeEXEFilePath(win32_platform_state *state, char *filename, char *dest, int dest_count) {
+void Win32RelativeEXEFilePath(Win32PlatformState *state, char *filename, char *dest, int dest_count) {
   ConcatStr(state->exe_filename,
             state->one_past_last_exe_filename_slash - state->exe_filename,
             filename, StrLen(filename),
@@ -95,7 +95,7 @@ DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory) {
 }
 
 DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile) {
-  debug_read_file_result result = {};
+  DebugReadFileResult result = {};
 
   HANDLE file_handle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
   if (file_handle != INVALID_HANDLE_VALUE) {
@@ -165,9 +165,9 @@ Win32GetLastFileWriteTime(char *filename) {
   return last_write_time;
 }
 
-internal win32_game_code
+internal Win32GameCode
 Win32LoadGameCode(char *source_dll_name, char *temp_dll_name) {
-  win32_game_code result = {};
+  Win32GameCode result = {};
 
   result.dll_last_compile_time = Win32GetLastFileWriteTime(source_dll_name);
   CopyFile(source_dll_name, temp_dll_name, FALSE);
@@ -189,7 +189,7 @@ Win32LoadGameCode(char *source_dll_name, char *temp_dll_name) {
 }
 
 internal void
-Win32UnloadGameCode(win32_game_code *game_code) {
+Win32UnloadGameCode(Win32GameCode *game_code) {
   if (game_code->game_code_dll) {
     FreeLibrary(game_code->game_code_dll);
   }
@@ -344,8 +344,8 @@ Win32InitDSound(HWND window, int32 samples_per_second, int32 buffer_size,
 }
 
 internal
-win32_window_dimension Win32GetWindowDimension(HWND window) {
-  win32_window_dimension ret;
+Win32WindowDimension Win32GetWindowDimension(HWND window) {
+  Win32WindowDimension ret;
   RECT client_rect;
   GetClientRect(window, &client_rect);
   ret.width = client_rect.right - client_rect.left;
@@ -354,7 +354,7 @@ win32_window_dimension Win32GetWindowDimension(HWND window) {
 }
 
 internal void
-Win32ResizeDIBSection(win32_offscreen_buffer *buffer, int32 width, int32 height) {
+Win32ResizeDIBSection(Win32OffscreenBuffer *buffer, int32 width, int32 height) {
   // TODO: bulletproof this. Maybe don't free first, free after, then free first
   //  if that fails.
   if (buffer->memory) {
@@ -397,7 +397,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *buffer, int32 width, int32 height)
 // Takes a buffer of pixel data and blits it to a Window that is associated with
 // `device_context`.
 internal void
-Win32RenderBuffer(win32_offscreen_buffer* buffer,
+Win32RenderBuffer(Win32OffscreenBuffer* buffer,
                   HDC device_context, int32 window_width, int32 window_height) {
   // TODO: fix aspect ratio
   // NOTE: for prototyping purposes, we're going to always blit 1-to-1 pixels to make
@@ -451,7 +451,7 @@ Win32MainWindowCallback(HWND window, UINT message, WPARAM w_param, LPARAM l_para
       // Only repaint the area that needs it
       PAINTSTRUCT paint;
       HDC device_context = BeginPaint(window, &paint);
-      win32_window_dimension dimension = Win32GetWindowDimension(window);
+      Win32WindowDimension dimension = Win32GetWindowDimension(window);
       Win32RenderBuffer(&global_backbuffer, device_context, dimension.width, dimension.height);
       EndPaint(window, &paint);
     }
@@ -495,7 +495,7 @@ Win32ClearSoundBuffer(win32_sound_output *sound_output) {
 
 internal void
 Win32FillSoundBuffer(win32_sound_output *sound_output, DWORD byte_to_lock,
-                     DWORD bytes_to_write, game_sound_output_buffer *source_buffer) {
+                     DWORD bytes_to_write, GameSoundOutputBuffer *source_buffer) {
   // The sound buffer will have 16bit samples with the left and right channels interleaved.
   // We want to group the left and right samples into pairs and then consider those as
   // single samples. That's needed for proper stereo sound!
@@ -535,13 +535,13 @@ Win32FillSoundBuffer(win32_sound_output *sound_output, DWORD byte_to_lock,
 
 internal void
 Win32ProcessXInputDigitalButton(DWORD xinput_button_state, DWORD button_bit,
-                                game_button_state *old_state, game_button_state *new_state) {
+                                GameButtonState *old_state, GameButtonState *new_state) {
   new_state->ended_down = ((xinput_button_state & button_bit) == button_bit);
   new_state->half_transition_count = (old_state->ended_down != new_state->ended_down) ? 1 : 0;
 }
 
 internal void
-Win32ProcessInputMessage(game_button_state *new_state, bool32 is_down) {
+Win32ProcessInputMessage(GameButtonState *new_state, bool32 is_down) {
   // NOTE: can happen when switching apps. Not so resilient at the moment
   if (new_state->ended_down != is_down) {
     new_state->ended_down = is_down;
@@ -568,22 +568,22 @@ Win32ProcessXInputStickValue(SHORT value, SHORT deadzone_threshold) {
 }
 
 internal void
-Win32GetInputFileLocation(win32_platform_state *state, int slot_index, char *dest, int dest_count) {
+Win32GetInputFileLocation(Win32PlatformState *state, int slot_index, char *dest, int dest_count) {
   char temp[64];
   wsprintf(temp, "loop_recording_%d.hmi", slot_index);
   Win32RelativeEXEFilePath(state, temp, dest, sizeof(dest));
 }
 
-internal win32_replay_buffer *
-Win32GetReplyBuffer(win32_platform_state *state, int unsigned index) {
+internal Win32ReplayBuffer *
+Win32GetReplyBuffer(Win32PlatformState *state, int unsigned index) {
   Assert(index < ArrayCount(state->replay_buffers));
-  win32_replay_buffer *replay = &state->replay_buffers[index];
+  Win32ReplayBuffer *replay = &state->replay_buffers[index];
   return replay;
 }
 
 internal void
-Win32StartRecordingInput(win32_platform_state *state, int input_recording_index) {
-  win32_replay_buffer *replay_buffer = Win32GetReplyBuffer(state, input_recording_index);
+Win32StartRecordingInput(Win32PlatformState *state, int input_recording_index) {
+  Win32ReplayBuffer *replay_buffer = Win32GetReplyBuffer(state, input_recording_index);
   if (replay_buffer->memory_block) {
     state->input_recording_index = input_recording_index;
     state->recording_handle = replay_buffer->file_handle;
@@ -601,13 +601,13 @@ Win32StartRecordingInput(win32_platform_state *state, int input_recording_index)
 }
 
 internal void
-Win32StopRecordingInput(win32_platform_state *state) {
+Win32StopRecordingInput(Win32PlatformState *state) {
   state->input_recording_index = 0;
 }
 
 internal void
-Win32StartInputPlayback(win32_platform_state *state, int input_playback_index) {
-  win32_replay_buffer *replay_buffer = Win32GetReplyBuffer(state, input_playback_index);
+Win32StartInputPlayback(Win32PlatformState *state, int input_playback_index) {
+  Win32ReplayBuffer *replay_buffer = Win32GetReplyBuffer(state, input_playback_index);
   if (replay_buffer->memory_block) {
     state->input_playback_index = input_playback_index;
     state->playback_handle = replay_buffer->file_handle;
@@ -623,18 +623,18 @@ Win32StartInputPlayback(win32_platform_state *state, int input_playback_index) {
 }
 
 internal void
-Win32StopInputPlayback(win32_platform_state *state) {
+Win32StopInputPlayback(Win32PlatformState *state) {
   state->input_playback_index = 0;
 }
 
 internal void
-Win32RecordInput(win32_platform_state *state, game_input *input) {
+Win32RecordInput(Win32PlatformState *state, GameInput *input) {
   DWORD bytes_written;
   WriteFile(state->recording_handle, input, sizeof(*input), &bytes_written, 0);
 }
 
 internal void
-Win32PlaybackInput(win32_platform_state *state, game_input *input) {
+Win32PlaybackInput(Win32PlatformState *state, GameInput *input) {
   DWORD bytes_read = 0;
   if (ReadFile(state->playback_handle, input, sizeof(*input), &bytes_read, 0)) {
     if (bytes_read == 0) {
@@ -646,9 +646,9 @@ Win32PlaybackInput(win32_platform_state *state, game_input *input) {
 }
 
 internal void
-Win32ProcessKeyboard(win32_platform_state *state,
-                     game_controller_input *keyboard_controller,
-                     win32_input_snapshot *input_snapshot) {
+Win32ProcessKeyboard(Win32PlatformState *state,
+                     GameControllerInput *keyboard_controller,
+                     Win32InputSnapshot *input_snapshot) {
   bool32 is_down = input_snapshot->is_down;
   // stop key repeats
   if (input_snapshot->was_down != is_down) {
@@ -731,8 +731,8 @@ Win32ProcessKeyboard(win32_platform_state *state,
 }
 
 internal void
-Win32ProcessPendingMessages(win32_platform_state *state,
-                            game_controller_input *keyboard_controller) {
+Win32ProcessPendingMessages(Win32PlatformState *state,
+                            GameControllerInput *keyboard_controller) {
   MSG message;
   // Don't use the blocking GetMessageA since we want to use the idle time
   while (PeekMessage(&message, 0, 0, 0, PM_REMOVE)) {
@@ -745,7 +745,7 @@ Win32ProcessPendingMessages(win32_platform_state *state,
       case WM_SYSKEYUP:
       case WM_KEYDOWN:
       case WM_KEYUP: {
-        win32_input_snapshot input_snapshot = {};
+        Win32InputSnapshot input_snapshot = {};
         input_snapshot.vk_code = (uint32)message.wParam;
         input_snapshot.was_down = ((message.lParam & (1 << 30)) != 0);
         input_snapshot.is_down = ((message.lParam & (1 << 31)) == 0);
@@ -763,7 +763,7 @@ Win32ProcessPendingMessages(win32_platform_state *state,
 }
 
 internal void
-Win32DebugDrawVertical(win32_offscreen_buffer *backbuffer,
+Win32DebugDrawVertical(Win32OffscreenBuffer *backbuffer,
                        int32 x, int32 top, int32 bottom, uint32 color) {
   if (top <= 0) {
     top = 0;
@@ -785,7 +785,7 @@ Win32DebugDrawVertical(win32_offscreen_buffer *backbuffer,
 }
 
 inline void
-Win32DrawSoundBufferMarker(DWORD value, win32_offscreen_buffer *backbuffer,
+Win32DrawSoundBufferMarker(DWORD value, Win32OffscreenBuffer *backbuffer,
                            win32_sound_output *sound_output, real32 coefficient,
                            int32 pad_x, int top, int bottom, uint32 color) {
   int32 x = pad_x + (int32)(coefficient * (real32)value);
@@ -793,8 +793,8 @@ Win32DrawSoundBufferMarker(DWORD value, win32_offscreen_buffer *backbuffer,
 }
 
 internal void
-Win32DebugDrawAudio(win32_offscreen_buffer *backbuffer, int32 marker_count,
-                    win32_debug_audio_time_marker *markers,
+Win32DebugDrawAudio(Win32OffscreenBuffer *backbuffer, int32 marker_count,
+                    Win32DebugAudioTimeMarker *markers,
                     int current_marker_index, win32_sound_output *sound_output,
                     real32 target_seconds_per_frame) {
   // Pad the sides in pixels
@@ -814,7 +814,7 @@ Win32DebugDrawAudio(win32_offscreen_buffer *backbuffer, int32 marker_count,
     int top = pad_y;
     int bottom = pad_y + line_height;
 
-    win32_debug_audio_time_marker *marker = &markers[marker_idx];
+    Win32DebugAudioTimeMarker *marker = &markers[marker_idx];
     Assert(marker->output_play_cursor < sound_output->secondary_buffer_size);
     Assert(marker->output_write_cursor < sound_output->secondary_buffer_size);
     Assert(marker->output_location < sound_output->secondary_buffer_size);
@@ -946,7 +946,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
 #endif
 
       // Initialize state
-      win32_platform_state win32_state = {};
+      Win32PlatformState win32_state = {};
       Win32GetEXEFilename(&win32_state);
 
       char source_game_code_dll_full_path[WIN32_STATE_FILE_NAME_COUNT];
@@ -956,7 +956,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
 
       // Initialize game memory
       // TODO create different memory profiles based on the type of computer running this
-      game_memory game_store = {};
+      GameMemory game_store = {};
 
       game_store.rand_seed = rand_seed;
       game_store.rand_rounds = rand_rounds;
@@ -981,7 +981,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
       for (int replay_index = 0;
            replay_index < ArrayCount(win32_state.replay_buffers);
            ++replay_index) {
-        win32_replay_buffer *replay_buffer = Win32GetReplyBuffer(&win32_state, replay_index);
+        Win32ReplayBuffer *replay_buffer = Win32GetReplyBuffer(&win32_state, replay_index);
 
         Win32GetInputFileLocation(&win32_state, replay_index,
                                   replay_buffer->filename, sizeof(replay_buffer->filename));
@@ -1017,22 +1017,22 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
         global_running = true;
         global_pause = false;
 
-        game_input input[2] = {};
-        game_input *new_input = &input[0];
-        game_input *old_input = &input[1];
+        GameInput input[2] = {};
+        GameInput *new_input = &input[0];
+        GameInput *old_input = &input[1];
 
         // Start tracking time
         LARGE_INTEGER last_counter = Win32GetWallClock();
         LARGE_INTEGER flip_wall_clock = Win32GetWallClock();
 
         int32 debug_audio_time_marker_idx = 0;
-        win32_debug_audio_time_marker debug_audio_time_markers[30] = {0};
+        Win32DebugAudioTimeMarker debug_audio_time_markers[30] = {0};
 
         DWORD audio_latency_bytes = 0;
         real32 audio_latency_seconds = 0;
         bool32 sound_is_valid = false;
 
-        win32_game_code game = Win32LoadGameCode(source_game_code_dll_full_path, temp_game_code_dll_full_path);
+        Win32GameCode game = Win32LoadGameCode(source_game_code_dll_full_path, temp_game_code_dll_full_path);
 
         // @start
         uint64 last_cycle_count = __rdtsc();
@@ -1046,9 +1046,9 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
           }
 
           // TODO Make a zeroing macro
-          game_controller_input *old_keyboard_controller = GetController(old_input, 0);
-          game_controller_input *new_keyboard_controller = GetController(new_input, 0);
-          game_controller_input zero_controller = {};
+          GameControllerInput *old_keyboard_controller = GetController(old_input, 0);
+          GameControllerInput *new_keyboard_controller = GetController(new_input, 0);
+          GameControllerInput zero_controller = {};
           *new_keyboard_controller = zero_controller;
           new_keyboard_controller->is_connected = true; // TODO actually verify instead of assuming
           for (int32 button_idx = 0;
@@ -1090,8 +1090,8 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
                 controller_idx < max_controller_count;
                 ++controller_idx) {
               DWORD our_controller_idx = controller_idx + 1;
-              game_controller_input *old_controller = GetController(old_input, our_controller_idx);
-              game_controller_input *new_controller = GetController(new_input, our_controller_idx);
+              GameControllerInput *old_controller = GetController(old_input, our_controller_idx);
+              GameControllerInput *new_controller = GetController(new_input, our_controller_idx);
 
               XINPUT_STATE controller_state;
               if (XInputGetState(controller_idx, &controller_state) == ERROR_SUCCESS) {
@@ -1214,9 +1214,9 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
             // -----------------------------------------------------------------------------
             // Update and render the game
 
-            thread_context thread = {};
+            ThreadContext thread = {};
 
-            game_offscreen_buffer screen_buffer = {};
+            GameOffscreenBuffer screen_buffer = {};
             screen_buffer.memory = global_backbuffer.memory;
             screen_buffer.width = global_backbuffer.width;
             screen_buffer.height = global_backbuffer.height;
@@ -1314,7 +1314,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
 
               // Write the audio buffer after the updating/rendering happens because we need
               // to know how many bytes to write.
-              game_sound_output_buffer sound_buffer = {};
+              GameSoundOutputBuffer sound_buffer = {};
               sound_buffer.samples_per_second = sound_output.samples_per_second;
               sound_buffer.sample_count = bytes_to_write / sound_output.bytes_per_sample;
               sound_buffer.samples = sound_samples;
@@ -1326,7 +1326,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
               Win32FillSoundBuffer(&sound_output, byte_to_lock, bytes_to_write, &sound_buffer);
 
 #if SNAKE_INTERNAL
-              win32_debug_audio_time_marker *marker = &debug_audio_time_markers[debug_audio_time_marker_idx];
+              Win32DebugAudioTimeMarker *marker = &debug_audio_time_markers[debug_audio_time_marker_idx];
               marker->output_play_cursor = play_cursor;
               marker->output_write_cursor = write_cursor;
               marker->output_location = byte_to_lock;
@@ -1392,7 +1392,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
             real32 ms_per_frame = 1000.0f * Win32GetSecondsElapsed(last_counter, end_counter);
             last_counter = end_counter;
 
-            win32_window_dimension dimension = Win32GetWindowDimension(window);
+            Win32WindowDimension dimension = Win32GetWindowDimension(window);
 #if SNAKE_INTERNAL
             /*
              * NOTE: temporarily disabling this
@@ -1418,13 +1418,13 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
               DWORD play_cursor = 0;
               DWORD write_cursor = 0;
               if (global_secondary_audio_buffer->GetCurrentPosition(&play_cursor, &write_cursor) == DS_OK) {
-                win32_debug_audio_time_marker *marker = &debug_audio_time_markers[debug_audio_time_marker_idx];
+                Win32DebugAudioTimeMarker *marker = &debug_audio_time_markers[debug_audio_time_marker_idx];
                 marker->flip_play_cursor = play_cursor;
                 marker->flip_write_cursor = write_cursor;
               }
             }
 #endif
-            game_input *temp = new_input;
+            GameInput *temp = new_input;
             new_input = old_input; // TODO should I clear these here?
             old_input = temp;
 
@@ -1457,7 +1457,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int32 s
       for (int replay_index = 0;
           replay_index < ArrayCount(win32_state.replay_buffers);
           ++replay_index) {
-        win32_replay_buffer *replay_buffer = Win32GetReplyBuffer(&win32_state, replay_index);
+        Win32ReplayBuffer *replay_buffer = Win32GetReplyBuffer(&win32_state, replay_index);
         CloseHandle(replay_buffer->file_handle);
       }
     }

@@ -1,6 +1,6 @@
 #if !defined(WIN32_SNAKE_GAME_H)
 
-struct win32_offscreen_buffer {
+struct Win32OffscreenBuffer {
   // NOTE: Pixels are always 32-bit wide, Little Endian 0x XX RR GG BB
   //  memory order BB GG RR XX
   BITMAPINFO info;
@@ -11,7 +11,7 @@ struct win32_offscreen_buffer {
   int32 pitch; // the width of buffer in bytes (also known as stride)
 };
 
-struct win32_window_dimension {
+struct Win32WindowDimension {
   int32 width;
   int32 height;
 };
@@ -28,7 +28,7 @@ struct win32_sound_output {
   // TODO should running smaple index be in bytes as well?
 };
 
-struct win32_debug_audio_time_marker {
+struct Win32DebugAudioTimeMarker {
   DWORD expected_flip_play_cursor;
   DWORD flip_play_cursor;
   DWORD flip_write_cursor;
@@ -38,7 +38,7 @@ struct win32_debug_audio_time_marker {
   DWORD output_byte_count;
 };
 
-struct win32_game_code {
+struct Win32GameCode {
   HMODULE game_code_dll;
   FILETIME dll_last_compile_time;
 
@@ -50,17 +50,17 @@ struct win32_game_code {
 };
 
 #define WIN32_STATE_FILE_NAME_COUNT MAX_PATH
-struct win32_replay_buffer {
+struct Win32ReplayBuffer {
   HANDLE file_handle;
   HANDLE memory_map;
   char filename[WIN32_STATE_FILE_NAME_COUNT];
   void *memory_block;
 };
 
-struct win32_platform_state {
+struct Win32PlatformState {
   uint64 total_size;
   void *game_store_block;
-  win32_replay_buffer replay_buffers[4];
+  Win32ReplayBuffer replay_buffers[4];
 
   HANDLE recording_handle;
   int input_recording_index;
@@ -72,7 +72,7 @@ struct win32_platform_state {
   char *one_past_last_exe_filename_slash;
 };
 
-struct win32_input_snapshot {
+struct Win32InputSnapshot {
   uint32 vk_code;
   bool32 is_down;
   bool32 was_down;
