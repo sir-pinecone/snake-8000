@@ -222,9 +222,9 @@ void RenderRecordingSpot(game_offscreen_buffer *buffer, game_state *state) {
 
 void RenderFood(game_offscreen_buffer *buffer, game_state *state) {
   uint32 color = RGBColor(100, 230, 140);
-  snake_food *food = &state->foods[0];
+  SnakeFood *food = &state->foods[0];
   for (int idx = 0; idx < state->num_foods; ++idx) {
-    snake_food *food = &state->foods[idx];
+    SnakeFood *food = &state->foods[idx];
     if (food) {
       int x_pixel = GetTilePixel(food->x, state->num_tiles_x, state->tile_size);
       int y_pixel = GetTilePixel(food->y, state->num_tiles_y, state->tile_size);
@@ -250,7 +250,8 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
 }
 
 void CreateFood(game_state *state) {
-  snake_food food = {};
+  SnakeFood food = {};
+  food.eaten = false;
   // TODO check for collision with player
   if (state->num_foods < ArrayCount(state->foods)) {
     // TODO check if food tile is already occupied
@@ -306,6 +307,11 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
       // Move the head
       MoveSnakePiece(head, head->dir);
 
+      // NOTE: two alternative approaches to solving the movement stuff. Have each piece
+      // prepare their next movement to be the direction of the previous piece's last move.
+      // NOTE: another way is to do the same as above but instead of mantaining a num_dir_recordings,
+      // just use the snake length for indexing. No need to delete recordings either.
+
       // Move the body pieces
       for (int piece_idx = 1; piece_idx < snake->length; ++piece_idx) {
         snake_piece *piece = GetSnakePiece(snake, piece_idx);
@@ -313,7 +319,7 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
         // TODO use the index to determine how many direction recordings need to be checked
         //   instead of looping over all of them every time.
         // Look at oldest recording first.
-        bool32 last_piece = piece_idx == snake->length - 1;
+        bool32 last_piece = (piece_idx == snake->length - 1);
         for (int idx = 0; idx < snake->num_dir_recordings; ++idx) {
           dir_change_record *record = &snake->dir_recordings[idx];
           if (piece->x == record->x && piece->y == record->y) {
@@ -339,25 +345,28 @@ void UpdateSnake(game_offscreen_buffer *buffer, game_state *state, real32 dt) {
       // Eat
       snake_piece *tail = &snake->pieces[snake->length - 1];
       for (int idx = 0; idx < state->num_foods; ++idx) {
-        snake_food *food = &state->foods[idx];
-        if (food && tail->x == food->x && tail->y == food->y) {
-          // TODO refactor this type of scanning/deletion code
-          // TODO BUG: looks weird when you move the moment you eat a food
-          for (int i = idx; i < state->num_foods; ++i) {
-            if (i == state->num_foods - 1) {
-              // Delete food
-              state->num_foods--;
-              state->foods[i] = {};
+        SnakeFood *food = &state->foods[idx];
+        // TODO BUG: looks weird when you move the moment you eat a food
+        if (food) {
+          if (!food->eaten && (tail->x == food->x) && (tail->y == food->y)) {
+            food->eaten = true;
+          } else if (food->eaten) {
+            for (int i = idx; i < state->num_foods; ++i) {
+              if (i == state->num_foods - 1) {
+                // Delete food
+                state->num_foods--;
+                state->foods[i] = {};
+              }
+              else {
+                // Shift food
+                state->foods[i] = state->foods[i + 1];
+              }
             }
-            else {
-              // Shift food
-              state->foods[i] = state->foods[i + 1];
-            }
+            ExtendSnake(snake);
+            CreateFood(state);
+            CreateFood(state);
+            CreateFood(state);
           }
-          ExtendSnake(snake);
-          CreateFood(state);
-          CreateFood(state);
-          CreateFood(state);
         }
       }
     }
@@ -494,9 +503,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     if (snake->alive) {
       UpdateSnake(screen_buffer, state, input->dt_for_frame);
     }
-    RenderSnake(screen_buffer, state);
     RenderFood(screen_buffer, state);
+    RenderSnake(screen_buffer, state);
+#if SNAKE_INTERNAL
     RenderRecordingSpot(screen_buffer, state);
+#endif
   }
 }
 

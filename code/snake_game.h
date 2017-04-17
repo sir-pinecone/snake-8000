@@ -245,7 +245,6 @@ typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 // TODO: reduce the pressure on this function's performance by measuring it or asking about it
 #define GAME_GET_SOUND_SAMPLES(name) void name(thread_context *thread, game_memory *memory, game_sound_output_buffer *sound_buffer)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
-
 //
 //
 //
@@ -274,15 +273,16 @@ struct snake_state {
   snake_piece pieces[200];
 };
 
-struct snake_food {
+struct SnakeFood {
   int x;
   int y;
+  bool32 eaten;
 };
 
 /* NOTE: might relocate this later since the platform layer doesn't need to know about it at all */
  struct game_state {
   snake_state snake;
-  snake_food foods[10];
+  SnakeFood foods[10];
   int num_foods;
   bool32 do_game_reset;
 
