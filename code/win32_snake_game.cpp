@@ -1,3 +1,5 @@
+// Engine created while watching Handmade Hero
+
 // TODO BUG: if I stop a loop while it's playing back input (say keyboard movement) then it
 //   will continue to apply that input until I generate a new input event.
 // TODO switch back to just int instead of int32?
