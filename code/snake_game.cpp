@@ -95,7 +95,7 @@ void RenderGrid(game_offscreen_buffer* buffer, game_state *state) {
     int y_pixel = GetTilePixel(y, state->num_tiles_y, state->tile_size);
     for (int x = 1; x <= state->num_tiles_x; ++x) {
       int x_pixel = GetTilePixel(x, state->num_tiles_x, state->tile_size);
-      DrawBlock(buffer, RGBColor(200, 200, 200), x_pixel, y_pixel, state->tile_size);
+      DrawBlock(buffer, RGBColor(255, 255, 255), x_pixel, y_pixel, state->tile_size);
     }
   }
 }
@@ -221,7 +221,7 @@ void RenderRecordingSpot(game_offscreen_buffer *buffer, game_state *state) {
 }
 
 void RenderFood(game_offscreen_buffer *buffer, game_state *state) {
-  uint32 color = RGBColor(250, 255, 0);
+  uint32 color = RGBColor(100, 230, 140);
   snake_food *food = &state->foods[0];
   for (int idx = 0; idx < state->num_foods; ++idx) {
     snake_food *food = &state->foods[idx];
@@ -237,7 +237,7 @@ void RenderSnake(game_offscreen_buffer *buffer, game_state *state) {
   snake_state *snake = &state->snake;
   snake_piece *head = GetSnakeHead(snake);
   uint32 color = snake->alive ? RGBColor(20, 90, 255) : RGBColor(255, 0, 0);
-  uint32 head_color = RGBColor(100, 90, 235);
+  uint32 head_color = RGBColor(10, 90, 203);
   for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
     snake_piece *piece = GetSnakePiece(snake, piece_idx);
     if (piece) {
