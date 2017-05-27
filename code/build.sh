@@ -39,7 +39,7 @@ snake_source_file="$code_dir/snake_game.cpp"
 
 mkdir $build_path -p
 pushd $build_path
-rm $build_path/*.pdb &>/dev/null
+rm *.pdb &>/dev/null
 
 #-----------------------------------------------------------------------------------------
 # Compile!
