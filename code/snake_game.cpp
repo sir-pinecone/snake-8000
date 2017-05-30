@@ -457,8 +457,10 @@ void ProcessInput(GameInput *input, GameState *state) {
 
       // Actions
       if (controller->start.ended_down) {
-        state->red_offset += 1;
-        if (snake->alive == false) {
+        if (!state->game_running) {
+          state->game_running = true;
+        }
+        else if (snake->alive == false) {
           state->do_game_reset = true;
         }
       }
@@ -488,7 +490,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 
     state->tone_hz = 220;
     state->t_sine = 0.0f;
-    state->red_offset = 1;
 
     state->game_width = screen_buffer->width;
     state->game_height = screen_buffer->height;
@@ -508,7 +509,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
   if (state->do_game_reset) {
     ResetGame(thread, memory, state);
   }
-  else {
+  else if (state->game_running) {
     // RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
     RenderGrid(screen_buffer, state);
     SnakeState *snake = &state->snake;

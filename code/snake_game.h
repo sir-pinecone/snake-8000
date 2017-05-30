@@ -285,6 +285,7 @@ struct SnakeFood {
   SnakeState snake;
   SnakeFood foods[10];
   int num_foods;
+  bool32 game_running;
   bool32 do_game_reset;
 
   int32 tone_hz;
