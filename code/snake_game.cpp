@@ -214,7 +214,7 @@ void RenderSnake(GameOffscreenBuffer *buffer, GameState *state) {
   SnakeState *snake = &state->snake;
   SnakePiece *head = GetSnakeHead(snake);
   uint32 color = snake->alive ? RGBColor(20, 90, 255) : RGBColor(255, 0, 0);
-  uint32 head_color = RGBColor(10, 90, 203);
+  uint32 head_color = snake->alive ? RGBColor(10, 90, 203) : RGBColor(200, 0, 40);
   for (int piece_idx = 0; piece_idx < snake->length; ++piece_idx) {
     SnakePiece *piece = GetSnakePiece(snake, piece_idx);
     if (piece) {
