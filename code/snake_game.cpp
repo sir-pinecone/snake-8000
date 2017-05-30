@@ -446,22 +446,21 @@ void ProcessInput(GameInput *input, GameState *state) {
         ChangeSnakeDirection(snake, SOUTH);
       }
 
-      if (controller->right_shoulder.ended_down && snake->alive &&
+      if (controller->right_shoulder.ended_down &&
+          snake->alive &&
           snake->length < ArrayCount(snake->pieces)) {
         ExtendSnake(snake);
       }
       else if (controller->left_shoulder.ended_down && snake->alive && snake->length > 1) {
         snake->length--;
       }
-    }
 
-    if (controller->action_down.ended_down) {
-      state->red_offset += 1;
-      if (snake->alive == false) {
-        state->do_game_reset = true;
-      }
-      else {
-        // TODO kill the window
+      // Actions
+      if (controller->start.ended_down) {
+        state->red_offset += 1;
+        if (snake->alive == false) {
+          state->do_game_reset = true;
+        }
       }
     }
 
