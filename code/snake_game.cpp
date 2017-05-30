@@ -38,29 +38,6 @@ void GameOutputSound(GameState *state, GameSoundOutputBuffer *sound_buffer, int3
   }
 }
 
-void RenderWeirdGradient(GameOffscreenBuffer* buffer,
-                         int32 blue_offset, int32 green_offset, int32 red_offset) {
-  // Points to a single byte memory address, starting with the head of the buffer
-  // We use bytes because the pointer moves down a row by shifting by the pitch, which
-  // is the buffer width in bytes
-  uint8 *row = (uint8 *)buffer->memory;
-  for (int32 y = 0; y < buffer->height; ++y) {
-    uint32 *pixel = (uint32*)row; // Get a 4-byte pixel pointer (using 32-bit RGB)
-    for (int32 x = 0; x < buffer->width; ++x) {
-      // 8 bits can go to 255 (for color); wraps to 0 when it overflows
-      // Creates a block effect
-      uint32 blue = x / 12 + blue_offset;
-      uint32 green = y / 12 + green_offset;
-      /* Create blocks by dividing y and y by some value (e.g. 80) and then multiply
-       * the result */
-      uint32 red = (x / 40) * (y / 40);
-      // Set value then increment by 4-bytes (size of pixel)
-      *pixel++ = RGBColor(red, green, blue);
-    }
-    row += buffer->pitch; // Move the pointer to the start of the next row
-  }
-}
-
 int GetTileIndex(int x, int y, int width, int height) {
   Assert(x > 0 && y > 0);
   int x_part = (x - 1) % width;
@@ -421,28 +398,22 @@ void ProcessInput(GameInput *input, GameState *state) {
 
     if (controller->is_analog) {
       /* NOTE:  Use analog movement tuning */
-      state->blue_offset += (int32)(4.0f * controller->stick_avg_x);
-      state->tone_hz = 220 + (int32)(128.0f * controller->stick_avg_y);
     }
     else {
       /* NOTE: Use digital movement tuning */
       if (controller->move_left.ended_down) {
-        state->blue_offset -= 1;
         ChangeSnakeDirection(snake, WEST);
       }
 
       if (controller->move_right.ended_down) {
-        state->blue_offset += 1;
         ChangeSnakeDirection(snake, EAST);
       }
 
       if (controller->move_up.ended_down) {
-        state->green_offset -= 1;
         ChangeSnakeDirection(snake, NORTH);
       }
 
       if (controller->move_down.ended_down) {
-        state->green_offset += 1;
         ChangeSnakeDirection(snake, SOUTH);
       }
 
@@ -488,9 +459,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     // Setup the rng
     pcg32_srandom_r(&rng, memory->rand_seed, memory->rand_rounds);
 
-    state->tone_hz = 220;
-    state->t_sine = 0.0f;
-
     state->game_width = screen_buffer->width;
     state->game_height = screen_buffer->height;
     state->tile_size = 25; // TODO investigate bug when this is < 10 ish
@@ -510,7 +478,6 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
     ResetGame(thread, memory, state);
   }
   else if (state->game_running) {
-    // RenderWeirdGradient(screen_buffer, state->blue_offset, state->green_offset, state->red_offset);
     RenderGrid(screen_buffer, state);
     SnakeState *snake = &state->snake;
     if (snake->alive) {
@@ -528,5 +495,5 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender) {
 // function name. This is needed in order for us to call the function from a DLL.
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples) {
   GameState *state = (GameState *)memory->permanent_storage;
-  GameOutputSound(state, sound_buffer, state->tone_hz);
+  // GameOutputSound(state, sound_buffer, state->tone_hz);
 }

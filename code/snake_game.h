@@ -288,18 +288,12 @@ struct SnakeFood {
   bool32 game_running;
   bool32 do_game_reset;
 
-  int32 tone_hz;
-  int32 blue_offset;
-  int32 green_offset;
-  int32 red_offset;
-
   int game_width;
   int game_height;
   int tile_size; // treated as a square
   int num_tiles_x;
   int num_tiles_y;
   real32 snake_update_timer;
-  real32 t_sine;
 
   int score;
 };
