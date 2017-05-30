@@ -362,6 +362,7 @@ void UpdateSnake(GameOffscreenBuffer *buffer, GameState *state, real32 dt) {
             else if (!head_is_tail && (tail->x == food->x) && (tail->y == food->y)) {
               // We'll remove the piece on the next pass
               food->eaten = true;
+              state->score += 1;
             }
           }
           else {
@@ -386,7 +387,6 @@ void UpdateSnake(GameOffscreenBuffer *buffer, GameState *state, real32 dt) {
 
 void ResetGame(ThreadContext *thread, GameMemory *memory, GameState *state) {
   // TODO implement no walls mode
-  state->do_game_reset = false;
   SnakeState snake = {};
   snake.new_direction = NONE;
   snake.num_dir_recordings = 0;
@@ -402,6 +402,8 @@ void ResetGame(ThreadContext *thread, GameMemory *memory, GameState *state) {
 
   state->snake = snake;
   state->snake_update_timer = 0.0f;
+  state->do_game_reset = false;
+  state->score = 0;
 
   CreateFood(state);
   CreateFood(state);

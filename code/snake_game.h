@@ -299,6 +299,8 @@ struct SnakeFood {
   int num_tiles_y;
   real32 snake_update_timer;
   real32 t_sine;
+
+  int score;
 };
 
 #define SNAKE_GAME_H
