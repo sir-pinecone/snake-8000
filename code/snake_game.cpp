@@ -274,6 +274,7 @@ void UpdateSnake(GameOffscreenBuffer *buffer, GameState *state, real32 dt) {
     state->snake_update_timer = 0.25f - StepSpeed(snake);
 
     SnakePiece *head = GetSnakeHead(snake);
+    SnakePiece *tail = &snake->pieces[snake->length - 1];
 
     if (snake->new_direction != NONE) {
       head->dir = snake->new_direction;
@@ -342,15 +343,28 @@ void UpdateSnake(GameOffscreenBuffer *buffer, GameState *state, real32 dt) {
         }
       }
 
+      bool32 head_is_tail = (snake->length == 1);
+
       // Eat
-      SnakePiece *tail = &snake->pieces[snake->length - 1];
       for (int idx = 0; idx < state->num_foods; ++idx) {
         SnakeFood *food = &state->foods[idx];
         // TODO BUG: looks weird when you move the moment you eat a food
         if (food) {
-          if (!food->eaten && (tail->x == food->x) && (tail->y == food->y)) {
-            food->eaten = true;
-          } else if (food->eaten) {
+          if (!food->eaten) {
+            if ((head->x == food->x) && (head->y == food->y)) {
+              CreateFood(state);
+              CreateFood(state);
+              CreateFood(state);
+              if (head_is_tail) {
+                food->eaten = true;
+              }
+            }
+            else if (!head_is_tail && (tail->x == food->x) && (tail->y == food->y)) {
+              // We'll remove the piece on the next pass
+              food->eaten = true;
+            }
+          }
+          else {
             for (int i = idx; i < state->num_foods; ++i) {
               if (i == state->num_foods - 1) {
                 // Delete food
@@ -363,9 +377,6 @@ void UpdateSnake(GameOffscreenBuffer *buffer, GameState *state, real32 dt) {
               }
             }
             ExtendSnake(snake);
-            CreateFood(state);
-            CreateFood(state);
-            CreateFood(state);
           }
         }
       }
